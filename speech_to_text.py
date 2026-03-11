@@ -6,7 +6,10 @@ import msvcrt
 import pyaudio
 
 recognizer = sr.Recognizer()
-recognizer.pause_threshold = 1.0
+recognizer.pause_threshold = 1.5  # Allow 1.5 seconds of silence before cutting off
+recognizer.dynamic_energy_threshold = False  # DO NOT recalibrate while listening (prevents early cutoff)
+recognizer.dynamic_energy_ratio = 2.5  # Ignore moderate fan noise
+recognizer.energy_threshold = 4000  # Start higher for fan noise
 
 # ── Bluetooth device auto-detection ──────────────────────────────────────────
 _BT_PREFERRED = ["headset", "airdopes", "earphone", "buds", "airpods", "bluetooth"]
@@ -42,8 +45,66 @@ def _find_bluetooth_device_index():
 _BT_DEVICE_INDEX = _find_bluetooth_device_index()
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Create a single global microphone object to avoid initialization delays
+# and PyAudio crashing from repeatedly reopening the device.
+_global_mic = None
+
+# Global background worker variables
+_speech_queue = queue.Queue()
+_is_listening_now = False
+_bg_thread_started = False
+
+def get_global_mic():
+    global _global_mic
+    if _global_mic is None:
+        _global_mic = sr.Microphone(device_index=_BT_DEVICE_INDEX)
+        # Enter the context manager ONCE (this opens the stream)
+        _global_mic.__enter__()
+        # Adjust for ambient noise once
+        recognizer.adjust_for_ambient_noise(_global_mic, duration=2.0)
+    return _global_mic
+
+def _mic_worker():
+    # Initialize the mic only once in this persistent daemon thread
+    mic = get_global_mic()
+    while True:
+        try:
+            # timeout=None GUARANTEES we never dump the pre-roll audio buffer.
+            # This ensures the very start of your words are perfectly captured.
+            audio = recognizer.listen(mic, timeout=None, phrase_time_limit=10.0)
+            
+            if _is_listening_now:
+                # We only transcribe if the main loop is actively waiting
+                try:
+                    text = recognizer.recognize_google(audio).strip()
+                    if text and _is_listening_now:
+                        _speech_queue.put(text)
+                except Exception:
+                    pass
+        except Exception:
+            # Fallback if PyAudio hiccups
+            import time
+            time.sleep(0.1)
+
 def listen(prompt="Listening (or type command)..."):
+    global _is_listening_now, _bg_thread_started
+    import time
+    
     print(prompt)
+    
+    # Start the permanent background mic thread on the very first listen()
+    if not _bg_thread_started:
+        _bg_thread_started = True
+        threading.Thread(target=_mic_worker, daemon=True).start()
+    
+    # Flush any stale speech that happened BEFORE this point
+    while not _speech_queue.empty():
+        try:
+            _speech_queue.get_nowait()
+        except queue.Empty:
+            break
+            
+    _is_listening_now = True
     
     result_queue = queue.Queue()
     stop_event = threading.Event()
@@ -72,46 +133,36 @@ def listen(prompt="Listening (or type command)..."):
             else:
                 stop_event.wait(0.1)
 
-    # Thread 2: Microphone Input (Using speech_recognition directly)
-    def mic_listener():
-        try:
-            with sr.Microphone(device_index=_BT_DEVICE_INDEX) as source:
-                recognizer.adjust_for_ambient_noise(source, duration=0.5)
-                while not stop_event.is_set():
-                    try:
-                        audio = recognizer.listen(source, timeout=1.0, phrase_time_limit=10.0)
-                        if stop_event.is_set():
-                            break
-                        text = recognizer.recognize_google(audio)
-                        text = text.strip()
-                        if text:
-                            result_queue.put(text)
-                            break
-                    except sr.WaitTimeoutError:
-                        continue
-                    except sr.UnknownValueError:
-                        continue
-                    except sr.RequestError:
-                        break
-        except Exception:
-            pass
-            
-    # Start both streams
     t_key = threading.Thread(target=keyboard_listener, daemon=True)
-    t_mic = threading.Thread(target=mic_listener, daemon=True)
-    
     t_key.start()
-    t_mic.start()
     
-    # Wait for either to return a transcribed string, or timeout and loop
     text_result = None
+    start_time = time.time()
+    
     try:
-        # 10 second timeout limit for either input method to catch up
-        text_result = result_queue.get(timeout=10)
-    except queue.Empty:
-        pass
+        # 10 second timeout limit overall
+        while time.time() - start_time < 10:
+            # Check if keyboard caught anything
+            try:
+                text_result = result_queue.get_nowait()
+                break
+            except queue.Empty:
+                pass
+                
+            # Check if background mic thread transcribed anything
+            try:
+                text_result = _speech_queue.get_nowait()
+                break
+            except queue.Empty:
+                pass
+                
+            time.sleep(0.1)
+            
+    except Exception as e:
+        print(f"[Listen Loop Error]: {e}")
         
-    # Send kill signal to threads
+    # Turn off mic transcriptions before leaving
+    _is_listening_now = False
     stop_event.set()
     
     if text_result:
