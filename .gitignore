@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+.env
+vosk-model*/
+model/
+model.zip
+*.wav
+*.mp3
+.idea/
+.vscode/
