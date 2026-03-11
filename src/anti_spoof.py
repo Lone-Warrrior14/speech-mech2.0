@@ -10,7 +10,7 @@ model_test = AntiSpoofPredict(0)
 image_cropper = CropImage()
 
 
-def is_real_face(frame, threshold=0.8):
+def is_real_face(frame, threshold=0.6):
 
     image_bbox = model_test.get_bbox(frame)
 

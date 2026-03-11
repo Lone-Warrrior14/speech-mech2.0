@@ -4,6 +4,7 @@ import pygame
 import os
 import uuid
 import time
+import keyboard
 
 VOICE = "en-US-AriaNeural"
 
@@ -28,6 +29,9 @@ def speak(text):
 
     # Wait until playback finishes
     while pygame.mixer.music.get_busy():
+        if keyboard.is_pressed('space'):
+            print("\n[Playback interrupted]")
+            break
         pygame.time.Clock().tick(10)
 
     pygame.mixer.music.stop()
