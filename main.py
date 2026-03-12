@@ -11,7 +11,12 @@ from identity import (
     set_user_password,
     create_user,
     register_face,
-    verify_face
+    verify_face,
+    get_user_id,
+    get_user_role,
+    delete_user,
+    get_all_users_with_ids,
+    delete_user_by_id
 )
 import sys
 import os
@@ -44,6 +49,7 @@ def should_exit(command):
 print("Wake word system active...")
 
 authenticated_user = None
+authenticated_user_id = None
 interaction_mode = "chat" # Default mode
 current_rag_namespace = None
 current_rag_path = None
@@ -188,6 +194,7 @@ while True:
         # 🔐 AUTH SUCCESS
         switch_active_user(selected_user)
         authenticated_user = selected_user
+        authenticated_user_id = str(get_user_id(selected_user))
         speak(f"Authentication successful. Welcome {selected_user}.")
 
         # 🔹 SELECT MODE
@@ -199,7 +206,7 @@ while True:
                     interaction_mode = "rag"
                     speak("RAG mode activated. Let's select your RAG folder.")
                     
-                    user_rag_root = os.path.join(os.path.dirname(__file__), "RAG", "users", authenticated_user)
+                    user_rag_root = os.path.join(os.path.dirname(__file__), "RAG", "users", f"user_{authenticated_user_id}")
                     os.makedirs(user_rag_root, exist_ok=True)
                     
                     folders = [f for f in os.listdir(user_rag_root) if os.path.isdir(os.path.join(user_rag_root, f))]
@@ -215,7 +222,7 @@ while True:
                     if folder_name:
                         current_rag_path = os.path.join(user_rag_root, folder_name)
                         os.makedirs(current_rag_path, exist_ok=True)
-                        current_rag_namespace = f"{authenticated_user}_{folder_name}"
+                        current_rag_namespace = f"user_{authenticated_user_id}_{folder_name}"
                         
                         speak(f"Folder {folder_name} selected. Do you want to upload files into this folder, or just chat?")
                         action = listen()
@@ -280,6 +287,58 @@ while True:
             full = get_full_response()
             if full:
                 speak(full)
+            continue
+            
+        if "delete user" in command or "remove user" in command:
+            role = get_user_role(authenticated_user)
+            if role and role.lower() == "admin":
+                from identity import get_all_users_with_ids, delete_user_by_id
+                users_list = get_all_users_with_ids()
+                
+                if not users_list:
+                    speak("No users found in the system.")
+                    continue
+                    
+                print("\n" + "="*40)
+                print("       --- List of Users ---")
+                print("="*40)
+                for u in users_list:
+                    print(f" ID: {u['id']} | Username: {u['username']}")
+                print("="*40 + "\n")
+                
+                speak("I have printed the list of users in the terminal. Please type the exactly correct ID number of the user you want to delete.")
+                import builtins
+                user_id_input = builtins.input("Enter exact user ID to delete: ").strip()
+                
+                if user_id_input.isdigit():
+                    victim_id = int(user_id_input)
+                    target_user = next((u for u in users_list if u['id'] == victim_id), None)
+                    
+                    if target_user:
+                        target_username = target_user['username']
+                        if delete_user_by_id(victim_id):
+                            speak(f"User {target_username} has been successfully deleted from the database.")
+                            # Securely wipe their local RAG directory
+                            import shutil
+                            victim_rag_dir = os.path.join(os.path.dirname(__file__), "RAG", "users", f"user_{victim_id}")
+                            if os.path.exists(victim_rag_dir):
+                                try:
+                                    shutil.rmtree(victim_rag_dir)
+                                    print(f"Deleted folder {victim_rag_dir}")
+                                    speak("And their local R A G files have been destroyed.")
+                                except Exception as e:
+                                    print(f"Error removing folder: {e}")
+                                    speak("However, I encountered an error removing their local files.")
+                            else:
+                                speak("No local document directory existed for them.")
+                        else:
+                            speak(f"Database error. Failed to delete user {target_username}.")
+                    else:
+                        speak(f"User ID {victim_id} does not exist in the system.")
+                else:
+                    speak("Invalid ID entered. Deletion cancelled.")
+            else:
+                speak("Access Denied. You do not have administrator privileges to delete users.")
             continue
 
         if interaction_mode == "rag" and generate_answer:

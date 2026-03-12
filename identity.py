@@ -32,6 +32,70 @@ def get_all_usernames():
     return [row[0] for row in rows]
 
 
+def get_all_users_with_ids():
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT id, username FROM users")
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return rows
+
+
+def get_user_id(username):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+    result = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if not result:
+        return None
+    return result["id"]
+
+
+def get_user_role(username):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT role FROM users WHERE username = %s", (username,))
+    result = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if not result:
+        return None
+    return result.get("role")
+
+
+def delete_user(username):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM users WHERE username = %s", (username,))
+        conn.commit()
+        success = True
+    except Exception as e:
+        print(f"DB Error: {e}")
+        success = False
+    cursor.close()
+    conn.close()
+    return success
+
+
+def delete_user_by_id(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        conn.commit()
+        success = True
+    except Exception as e:
+        print(f"DB Error: {e}")
+        success = False
+    cursor.close()
+    conn.close()
+    return success
+
+
 def create_user(username):
     conn = get_connection()
     cursor = conn.cursor()
