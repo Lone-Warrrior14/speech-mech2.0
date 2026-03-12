@@ -14,14 +14,15 @@ index = pc.Index("rag-index")
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
-def retrieve_chunks(query, top_k=5):
+def retrieve_chunks(query, namespace, top_k=5):
 
     embedding = get_embedding(query)
 
     results = index.query(
         vector=embedding,
         top_k=top_k,
-        include_metadata=True
+        include_metadata=True,
+        namespace=namespace
     )
 
     chunks = [match["metadata"]["text"] for match in results["matches"]]
@@ -29,9 +30,9 @@ def retrieve_chunks(query, top_k=5):
     return chunks
 
 
-def generate_answer(query):
+def generate_answer(query, namespace):
 
-    chunks = retrieve_chunks(query)
+    chunks = retrieve_chunks(query, namespace)
 
     context = "\n\n".join(chunks)
 
@@ -58,10 +59,4 @@ Answer clearly and concisely.
 
 
 if __name__ == "__main__":
-
-    query = input("Ask a question: ")
-
-    answer = generate_answer(query)
-
-    print("\nAnswer:\n")
-    print(answer)
+    pass

@@ -1,0 +1,8 @@
+[20260312-134443] Question: who is the founder
+Answer:
+Tim Berners-Lee is the founder of the World Wide Web.
+----------------------------------------
+[20260312-134523] Question: what is semantic web
+Answer:
+The Semantic Web is a next generation Web architecture that aims to provide a knowledge representation of linked data to enable machine processing on a global scale, allowing computers to understand and process data in a meaningful way. It involves expressing logic through knowledge representation systems, creating a platform for software agents to perform sophisticated tasks for users.
+----------------------------------------

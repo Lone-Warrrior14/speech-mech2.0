@@ -13,8 +13,23 @@ from identity import (
     register_face,
     verify_face
 )
-import time
 import sys
+import os
+
+# Ensure RAG module can be found if running from root directory
+sys.path.append(os.path.join(os.path.dirname(__file__), 'RAG'))
+try:
+    from RAG.rag_answer import generate_answer
+    from RAG.universal_reader import pick_and_read_files
+    from RAG.insert_pinecone import insert_document
+except ImportError as e:
+    # Handle scenario where RAG is missing or not installed
+    print(f"[{e}] -> RAG module is not available. Some dependencies might be missing.")
+    generate_answer = None
+    pick_and_read_files = None
+    insert_document = None
+
+import time
 import getpass
 
 TIMEOUT_SECONDS = 30
@@ -29,6 +44,9 @@ def should_exit(command):
 print("Wake word system active...")
 
 authenticated_user = None
+interaction_mode = "chat" # Default mode
+current_rag_namespace = None
+current_rag_path = None
 
 while True:
 
@@ -172,6 +190,72 @@ while True:
         authenticated_user = selected_user
         speak(f"Authentication successful. Welcome {selected_user}.")
 
+        # 🔹 SELECT MODE
+        speak("What would you like to do? Say 'chat' for normal chat, or 'R A G' for document question answering.")
+        mode_selection = listen()
+        if mode_selection:
+            if "rag" in mode_selection or "r a g" in mode_selection or "document" in mode_selection:
+                if generate_answer:
+                    interaction_mode = "rag"
+                    speak("RAG mode activated. Let's select your RAG folder.")
+                    
+                    user_rag_root = os.path.join(os.path.dirname(__file__), "RAG", "users", authenticated_user)
+                    os.makedirs(user_rag_root, exist_ok=True)
+                    
+                    folders = [f for f in os.listdir(user_rag_root) if os.path.isdir(os.path.join(user_rag_root, f))]
+                    if folders:
+                        print("Available folders:", ", ".join(folders))
+                        speak("I see existing folders. Please type the name of the folder you want to create or use in the terminal.")
+                    else:
+                        speak("No folders found. Let's create a new one. Please type the folder name in the terminal.")
+                        
+                    import builtins
+                    folder_name = builtins.input(f"Enter RAG folder name (Available: {', '.join(folders)} or type new name): ").strip()
+                    
+                    if folder_name:
+                        current_rag_path = os.path.join(user_rag_root, folder_name)
+                        os.makedirs(current_rag_path, exist_ok=True)
+                        current_rag_namespace = f"{authenticated_user}_{folder_name}"
+                        
+                        speak(f"Folder {folder_name} selected. Do you want to upload files into this folder, or just chat?")
+                        action = listen()
+                        if action and ("upload" in action or "add" in action or "new" in action or "yes" in action):
+                            speak("Please select the documents from the popup window.")
+                            try:
+                                results = pick_and_read_files()
+                                if results:
+                                    speak("Files parsed successfully. Updating your database.")
+                                    for file_path, text in results:
+                                        filename = os.path.basename(file_path)
+                                        # Index tightly coupled to their namespace
+                                        insert_document(filename, text, namespace=current_rag_namespace)
+                                        
+                                        # Store locally in their user box just as txt
+                                        txt_dest = os.path.join(current_rag_path, filename + ".txt")
+                                        with open(txt_dest, "w", encoding="utf-8") as f:
+                                            f.write(text)
+                                            
+                                    speak(f"Successfully uploaded {len(results)} documents. You can now prompt me questions.")
+                                else:
+                                    speak("No documents selected.")
+                                    interaction_mode = "chat"
+                                    speak("Falling back to normal chat.")
+                            except Exception as e:
+                                print(f"File Add Error: {e}")
+                                speak("I encountered an error trying to process the files.")
+                        else:
+                            speak("Okay, chatting with your existing documents in this folder. Go ahead and start asking.")
+                    else:
+                        speak("No folder entered. Falling back to normal chat.")
+                        interaction_mode = "chat"
+                else:
+                    speak("RAG module is not available. Falling back to normal chat.")
+            else:
+                interaction_mode = "chat"
+                speak("Normal chat mode activated.")
+        else:
+            speak("No mode selected, defaulting to normal chat.")
+
     last_activity = time.time()
 
     # 🔹 SESSION LOOP
@@ -198,11 +282,33 @@ while True:
                 speak(full)
             continue
 
-        intent = detect_intent(command)
-        response = route_intent(intent, command)
-
-        if response:
-            speak(response)
+        if interaction_mode == "rag" and generate_answer:
+            speak("Searching documents...")
+            try:
+                answer = generate_answer(command, namespace=current_rag_namespace)
+                speak(answer)
+                
+                # Save the user's RAG question/answer pair locally to their dedicated folder instead of the cloud
+                try:
+                    timestamp_str = time.strftime("%Y%m%d-%H%M%S")
+                    local_output = os.path.join(current_rag_path, "chat_history.txt")
+                    
+                    with open(local_output, "a", encoding="utf-8") as f:
+                        f.write(f"[{timestamp_str}] Question: {command}\nAnswer:\n{answer}\n{'-'*40}\n")
+                        
+                    print(f"Appended RAG answer to: {local_output}")
+                except Exception as local_save_error:
+                    print(f"Failed to save locally: {local_save_error}")
+                        
+            except Exception as e:
+                speak("I encountered an error querying the documents.")
+                print(f"RAG Error: {e}")
         else:
-            reply = ask_ai(command)
-            speak(reply)
+            intent = detect_intent(command)
+            response = route_intent(intent, command)
+
+            if response:
+                speak(response)
+            else:
+                reply = ask_ai(command)
+                speak(reply)

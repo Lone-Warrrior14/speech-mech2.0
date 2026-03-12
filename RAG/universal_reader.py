@@ -91,27 +91,51 @@ def read_file(path):
         raise ValueError("Unsupported file type")
 
 
-# open file picker
-root = tk.Tk()
-root.withdraw()
+def pick_and_read_files():
+    root = tk.Tk()
+    root.withdraw()
+    
+    # Needs to stay on top because some frameworks misbehave if UI is completely withdrawn without update
+    root.update()
+    root.wm_attributes('-topmost', 1)
 
-file_path = filedialog.askopenfilename(
-    title="Select a document",
-    filetypes=[
-        ("Documents", "*.pdf *.doc *.docx *.ppt *.pptx *.png *.jpg *.jpeg")
-    ]
-)
+    file_paths = filedialog.askopenfilenames(
+        title="Select documents",
+        filetypes=[
+            ("Documents", "*.pdf *.doc *.docx *.ppt *.pptx *.png *.jpg *.jpeg")
+        ]
+    )
 
-if file_path:
+    results = []
+    if file_paths:
+        for file_path in file_paths:
+            print("Selected file:", file_path)
+            try:
+                text = read_file(file_path)
+                
+                # Delete PDF if it was a PDF as requested
+                if file_path.lower().endswith(".pdf"):
+                    try:
+                        os.remove(file_path)
+                        print(f"Deleted original PDF file: {file_path}")
+                    except Exception as e:
+                        print(f"Could not delete PDF file: {e}")
+                        
+                if file_path and text:
+                    results.append((file_path, text))
+            except Exception as e:
+                print(f"Error reading file {file_path}: {e}")
+        return results
+    else:
+        print("No files selected")
+        return []
 
-    print("Selected file:", file_path)
-
-    text = read_file(file_path)
-
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(text)
-
-    print("Text saved to output.txt")
-
-else:
-    print("No file selected")
+if __name__ == "__main__":
+    results = pick_and_read_files()
+    if results:
+        count = 0
+        for path, text in results:
+            with open(f"output_{count}.txt", "w", encoding="utf-8") as f:
+                f.write(text)
+            count += 1
+        print(f"Successfully saved {count} files.")
