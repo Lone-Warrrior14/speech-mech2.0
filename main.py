@@ -20,8 +20,9 @@ from identity import (
 )
 import sys
 import os
+import subprocess
+import webbrowser
 
-# Ensure RAG module can be found if running from root directory
 sys.path.append(os.path.join(os.path.dirname(__file__), 'RAG'))
 try:
     from RAG.rag_answer import generate_answer
@@ -33,6 +34,15 @@ except ImportError as e:
     generate_answer = None
     pick_and_read_files = None
     insert_document = None
+
+# Ensure media module can be found
+media_path = os.path.join(os.path.dirname(__file__), 'media')
+sys.path.append(media_path)
+try:
+    from backend import entertainment_mode
+except ImportError as e:
+    print(f"[{e}] -> Media module is not available.")
+    entertainment_mode = None
 
 import time
 import getpass
@@ -53,6 +63,7 @@ authenticated_user_id = None
 interaction_mode = "chat" # Default mode
 current_rag_namespace = None
 current_rag_path = None
+rag_history = []  # To maintain context during RAG sessions
 
 while True:
 
@@ -198,10 +209,42 @@ while True:
         speak(f"Authentication successful. Welcome {selected_user}.")
 
         # 🔹 SELECT MODE
-        speak("What would you like to do? Say 'chat' for normal chat, or 'R A G' for document question answering.")
+        speak("What would you like to do? Say 'chat' for normal chat, 'R A G' for documents, 'code assist' for code tools, or 'entertainment' for media.")
         mode_selection = listen()
         if mode_selection:
-            if "rag" in mode_selection or "r a g" in mode_selection or "document" in mode_selection:
+            if any(phrase in mode_selection for phrase in ["entertainment", "media", "start entertainment", "play movies"]):
+                if entertainment_mode:
+                    speak("Entering Entertainment mode. I will list your movies and open the player.")
+                    # Pass control over to entertainment_mode loop
+                    try:
+                        entertainment_mode()
+                    except Exception as e:
+                        speak("Entertainment mode ended with an error.")
+                        print(f"Media error: {e}")
+                    interaction_mode = "chat"
+                    speak("Welcome back. Defaulting to normal chat mode.")
+                else:
+                    speak("Entertainment module is not available.")
+                    interaction_mode = "chat"
+
+            elif any(phrase in mode_selection for phrase in ["code assist", "start code assist", "open code assist", "launch code assist"]):
+                speak("Starting Code Assist. Please wait a moment.")
+                code_assist_path = os.path.join(os.path.dirname(__file__), "code_assists", "app.py")
+                try:
+                    subprocess.Popen(
+                        [sys.executable, code_assist_path],
+                        cwd=os.path.join(os.path.dirname(__file__), "code_assists")
+                    )
+                    import time as _time
+                    _time.sleep(2)  # Give Flask a moment to start
+                    webbrowser.open("http://127.0.0.1:5000")
+                    speak("Code Assist is running. I have opened it in your browser. Defaulting to normal chat mode.")
+                except Exception as e:
+                    speak("Failed to start Code Assist.")
+                    print(f"Code Assist Error: {e}")
+                interaction_mode = "chat"
+
+            elif "rag" in mode_selection or "r a g" in mode_selection or "document" in mode_selection:
                 if generate_answer:
                     interaction_mode = "rag"
                     speak("RAG mode activated. Let's select your RAG folder.")
@@ -223,6 +266,7 @@ while True:
                         current_rag_path = os.path.join(user_rag_root, folder_name)
                         os.makedirs(current_rag_path, exist_ok=True)
                         current_rag_namespace = f"user_{authenticated_user_id}_{folder_name}"
+                        rag_history.clear()  # Reset history for a new folder
                         
                         speak(f"Folder {folder_name} selected. Do you want to upload files into this folder, or just chat?")
                         action = listen()
@@ -288,6 +332,38 @@ while True:
             if full:
                 speak(full)
             continue
+
+        # 🔹 CODE ASSIST
+        if any(phrase in command for phrase in ["code assist", "start code assist", "open code assist", "launch code assist"]):
+            speak("Starting Code Assist. Please wait a moment.")
+            code_assist_path = os.path.join(os.path.dirname(__file__), "code_assists", "app.py")
+            try:
+                subprocess.Popen(
+                    [sys.executable, code_assist_path],
+                    cwd=os.path.join(os.path.dirname(__file__), "code_assists")
+                )
+                import time as _time
+                _time.sleep(2)  # Give Flask a moment to start
+                webbrowser.open("http://127.0.0.1:5000")
+                speak("Code Assist is running. I have opened it in your browser.")
+            except Exception as e:
+                speak("Failed to start Code Assist.")
+                print(f"Code Assist Error: {e}")
+            continue
+
+        # 🔹 ENTERTAINMENT / MEDIA
+        if any(phrase in command for phrase in ["entertainment", "media", "start entertainment", "play movies"]):
+            if entertainment_mode:
+                speak("Entering Entertainment mode.")
+                try:
+                    entertainment_mode()
+                except Exception as e:
+                    speak("Entertainment mode ended with an error.")
+                    print(f"Media error: {e}")
+                speak("You have exited Entertainment mode.")
+            else:
+                speak("Entertainment module is not available.")
+            continue
             
         if "delete user" in command or "remove user" in command:
             role = get_user_role(authenticated_user)
@@ -344,8 +420,12 @@ while True:
         if interaction_mode == "rag" and generate_answer:
             speak("Searching documents...")
             try:
-                answer = generate_answer(command, namespace=current_rag_namespace)
+                answer = generate_answer(command, namespace=current_rag_namespace, chat_history=rag_history)
                 speak(answer)
+                
+                # Keep history for context
+                rag_history.append({"user": command, "assistant": answer})
+                rag_history = rag_history[-5:]  # Keep last 5 turns
                 
                 # Save the user's RAG question/answer pair locally to their dedicated folder instead of the cloud
                 try:

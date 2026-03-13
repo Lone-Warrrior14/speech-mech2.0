@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>AI Code Assistant</title>
+
+    <script>
+
+        function copyCode(id) {
+            var text = document.getElementById(id).value
+            navigator.clipboard.writeText(text)
+            alert("Code Copied")
+        }
+
+    </script>
+
+</head>
+
+<body>
+
+    <h2>AI Code Assistant</h2>
+
+    <form method="POST">
+
+        <textarea name="code" rows="12" cols="100" placeholder="Type question OR paste code to fix"></textarea>
+
+        <br><br>
+
+        <button type="submit">Run Assistant</button>
+
+    </form>
+
+    <hr>
+
+    {% for file in files %}
+
+    <h3>{{file[0]}}</h3>
+
+    <textarea id="code{{loop.index}}" rows="12" cols="100" readonly>
+{{file[1]}}
+</textarea>
+
+    <br>
+
+    <button onclick="copyCode('code{{loop.index}}')">
+        Copy Code
+    </button>
+
+    <hr>
+
+    {% endfor %}
+
+    <h3>Explanation</h3>
+
+    <textarea rows="6" cols="100" readonly>
+{{explanation}}
+</textarea>
+
+    <br><br>
+
+    <h3>Pip Install Commands</h3>
+
+    <textarea rows="4" cols="100" readonly>
+{{pip_commands}}
+</textarea>
+
+    <br><br>
+
+    <a href="/download">
+        <button type="button">Download Project ZIP</button>
+    </a>
+
+</body>
+
+</html>

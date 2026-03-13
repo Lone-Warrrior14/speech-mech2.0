@@ -30,11 +30,24 @@ def retrieve_chunks(query, namespace, top_k=5):
     return chunks
 
 
-def generate_answer(query, namespace):
-
-    chunks = retrieve_chunks(query, namespace)
-
+def generate_answer(query, namespace, chat_history=None):
+    if chat_history is None:
+        chat_history = []
+        
+    # To help with queries like "what did he do?", include some history in the search query
+    search_query = query
+    if len(chat_history) > 0 and len(query.split()) < 6:
+        last_turn = chat_history[-1]
+        search_query = f"{last_turn['user']} {query}"
+        
+    chunks = retrieve_chunks(search_query, namespace)
     context = "\n\n".join(chunks)
+
+    history_text = ""
+    if chat_history:
+        history_text = "Previous Conversation History:\n"
+        for msg in chat_history[-3:]: # Keep last 3 turns
+            history_text += f"User: {msg['user']}\nAssistant: {msg['assistant']}\n"
 
     prompt = f"""
 Use the following context to answer the question.
@@ -42,7 +55,9 @@ Use the following context to answer the question.
 Context:
 {context}
 
-Question:
+{history_text}
+
+Current Question:
 {query}
 
 Answer clearly and concisely.
