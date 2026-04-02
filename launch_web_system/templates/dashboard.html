@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPEECH-MECH | Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="premium-container" style="background-image: linear-gradient(rgba(10, 11, 30, 0.9), rgba(10, 11, 30, 0.9)), url('/static/img/dash_bg.png'); justify-content: flex-start; padding-top: 5rem;">
+        
+        <nav style="position: absolute; top: 2rem; width: 100%; display: flex; justify-content: space-between; padding: 0 4rem; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <img src="/static/img/ai_icon.png" alt="AI" style="width: 40px; height: 40px;">
+                <h2 style="margin: 0; font-weight: 700;">Speech Mech</h2>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+                <span style="color: var(--secondary); cursor: pointer;" onclick="location.href='/settings'">
+                    <i class="fas fa-cog"></i> Settings
+                </span>
+                <span style="color: var(--secondary);">Welcome, <strong>{{ user }}</strong></span>
+                <a href="/logout" class="btn btn-secondary" style="width: auto; padding: 0.5rem 1.5rem; margin: 0;">Logout</a>
+            </div>
+        </nav>
+
+        <div style="text-align: center; margin-bottom: 3rem;">
+            <h1 style="font-size: 2.5rem; margin-bottom: 1rem;">System Core Active</h1>
+            <p style="color: var(--secondary);">Select an operational intelligence module</p>
+        </div>
+
+        <div id="system-response" style="max-width: 800px; margin: 0 auto 2rem auto; display: none;">
+            <div class="glass-card" style="padding: 1rem 2rem; border-color: var(--primary);">
+                <p style="color: var(--secondary); font-size: 0.8rem; margin: 0 0 0.5rem 0;">SYSTEM RESPONSE</p>
+                <p id="response-text" style="font-weight: 600; margin: 0;"></p>
+            </div>
+        </div>
+
+        <div class="dash-grid">
+            <div class="mode-card" onclick="location.href='/rag'">
+                <i class="fas fa-brain"></i>
+                <h3>RAG INTEL</h3>
+                <p style="color: #888; font-size: 0.9rem;">Document intelligence and recursive knowledge retrieval system.</p>
+                <button class="btn" style="margin-top: 2rem;">Access Core</button>
+            </div>
+
+            <div class="mode-card" onclick="location.href='/entertainment'">
+                <i class="fas fa-play-circle"></i>
+                <h3>MEDIA BOX</h3>
+                <p style="color: #888; font-size: 0.9rem;">High-fidelity entertainment and media streaming interface.</p>
+                <button class="btn" style="margin-top: 2rem;">Play Media</button>
+            </div>
+
+            <div class="mode-card" onclick="location.href='/code_assist'">
+                <i class="fas fa-code"></i>
+                <h3>OMNI CODER</h3>
+                <p style="color: #888; font-size: 0.9rem;">Advanced code generation and multi-language development assistant.</p>
+                <button class="btn" style="margin-top: 2rem;">Initiate Uplink</button>
+            </div>
+
+            <div class="mode-card" onclick="location.href='/image_gen'">
+                <i class="fas fa-magic"></i>
+                <h3>IMAGE GEN</h3>
+                <p style="color: #888; font-size: 0.9rem;">High-quality AI image generation and visual manifestation.</p>
+                <button class="btn" style="margin-top: 2rem;">Create Visuals</button>
+            </div>
+            
+            <div class="mode-card" onclick="toggleMicPower()">
+                <i class="fas fa-microphone"></i>
+                <h3>VOICE POWER</h3>
+                <p id="mic-status" style="color: #888; font-size: 0.9rem;">Mic Off. Click to engage permanent listening mode.</p>
+                <button id="mic-btn-main" class="btn btn-secondary" style="margin-top: 2rem;">Power On</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Voice Command Button -->
+    <div class="voice-trigger" id="voiceBtn" onclick="toggleMicPower()">
+        <svg class="mic-svg" viewBox="0 0 24 24">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+    </div>
+
+    <script>
+        let micPowered = false;
+        let recognition = null;
+        let isSpeaking = false;
+
+        function speak(text) {
+            if (!text) return;
+            window.speechSynthesis.cancel();
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.onstart = () => {
+                isSpeaking = true;
+                if (micPowered && recognition) {
+                    try { recognition.stop(); } catch(e) {}
+                }
+            };
+            msg.onend = () => {
+                isSpeaking = false;
+                if (micPowered) {
+                    setTimeout(() => {
+                        if (micPowered && !isSpeaking) {
+                            try { recognition.start(); } catch(e) {}
+                        }
+                    }, 300);
+                }
+            };
+            window.speechSynthesis.speak(msg);
+        }
+
+        function toggleMicPower() {
+            const btn = document.getElementById('voiceBtn');
+            const mainBtn = document.getElementById('mic-btn-main');
+            const statusText = document.getElementById('mic-status');
+            
+            micPowered = !micPowered;
+            
+            if (micPowered) {
+                btn.classList.add('active');
+                if (mainBtn) mainBtn.innerText = "Power Off";
+                if (statusText) statusText.innerText = "Mic Active. Continuously monitoring neural uplink...";
+                startContinuousListening();
+            } else {
+                btn.classList.remove('active');
+                if (mainBtn) mainBtn.innerText = "Power On";
+                if (statusText) statusText.innerText = "Mic Off. Click to engage permanent listening mode.";
+                if (recognition) {
+                    try { recognition.stop(); } catch(e) {}
+                }
+            }
+        }
+
+        function startContinuousListening() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return;
+
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+
+            recognition.onstart = () => {
+                document.getElementById('voiceBtn').classList.add('active');
+            };
+
+            recognition.onresult = async (event) => {
+                if (isSpeaking) return; // Ignore if browser is talking
+                const command = event.results[0][0].transcript;
+                const resBox = document.getElementById('system-response');
+                const resText = document.getElementById('response-text');
+                
+                resBox.style.display = 'block';
+                resText.innerText = "Recognized: " + command;
+                
+                try {
+                    const res = await fetch('/api/process_text_command', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ command })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.response.startsWith('NAV:')) {
+                        const target = data.response.replace('NAV:', '').toLowerCase();
+                        resText.innerText = "Neural Jump: " + target;
+                        if (target === 'rag') window.location.href = '/rag';
+                        else if (target === 'media') window.location.href = '/entertainment';
+                        else if (target === 'code') window.location.href = '/code_assist';
+                        else if (target === 'image_gen') window.location.href = '/image_gen';
+                        else if (target === 'settings') window.location.href = '/settings';
+                        else if (target === 'logout') window.location.href = '/logout';
+                        else if (target === 'dashboard') window.location.href = '/dashboard';
+                    } else if (data.response.startsWith("FOLDER_SELECT:")) {
+                        const targetFolder = data.response.replace("FOLDER_SELECT:", "");
+                        resText.innerText = "Synchronizing Folder: " + targetFolder;
+                        window.location.href = `/rag?select_folder=${encodeURIComponent(targetFolder)}`;
+                    } else if (data.response === 'CMD:UPLOAD') {
+                        window.location.href = '/rag?auto_upload=true';
+                    } else {
+                        resText.innerText = data.response;
+                        speak(data.response); // Speak the answer
+                    }
+                } catch (err) {
+                    resText.innerText = "Uplink Failure.";
+                }
+            };
+
+            recognition.onend = () => {
+                document.getElementById('voiceBtn').classList.remove('active');
+                if (micPowered && !isSpeaking) {
+                    setTimeout(() => {
+                        if (micPowered && !isSpeaking) {
+                            try { recognition.start(); } catch(e) {}
+                        }
+                    }, 300);
+                }
+            };
+
+            recognition.onerror = (event) => {
+                const status = document.getElementById('mic-status');
+                if (event.error === 'not-allowed') {
+                    status.innerText = "Mic Permission Denied.";
+                } else if (event.error === 'no-speech') {
+                    // Do nothing, just restart later
+                } else if (event.error === 'network') {
+                    status.innerText = "Neural Signal Weak (Network Error).";
+                } else {
+                    console.error("Mic Error:", event.error);
+                }
+            };
+
+            recognition.start();
+        }
+
+        window.onload = () => {
+             // Delay slightly to allow full system synchronization
+             setTimeout(toggleMicPower, 1000);
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Mech | Login</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="premium-container" style="background-image: linear-gradient(rgba(10, 11, 30, 0.8), rgba(10, 11, 30, 0.8)), url('/static/img/login_bg.png');">
+        <div class="glass-card">
+            <div style="margin-bottom: 2rem;">
+                <img src="/static/img/ai_icon.png" alt="AI" style="width: 80px; height: 80px; filter: drop-shadow(0 0 10px var(--primary));">
+                <h1 style="margin-top: 1rem; font-weight: 700; background: linear-gradient(135deg, white, var(--secondary)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Speech Mech</h1>
+                <p style="color: var(--secondary); font-size: 0.9rem;">Biometric Neural Access</p>
+            </div>
+
+            <div id="login-form">
+                <div class="input-group">
+                    <label>Username</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="username" placeholder="Enter your identity" autocomplete="off" style="flex: 1;">
+                        <button class="btn" style="width: auto; padding: 0 1.5rem; margin: 0; border-radius: 12px;" onclick="initAuthOptions()">
+                            Confirm
+                        </button>
+                    </div>
+                </div>
+
+                <div id="auth-options" style="display: none; margin-top: 1rem;">
+                    <p style="font-size: 0.85rem; color: var(--secondary); margin-bottom: 1rem;">Select Authentication Protocol:</p>
+                    <button class="btn" id="btn-face-opt" onclick="startFaceAuthSequence()">
+                        <i class="fas fa-eye"></i> Biometric Unlock
+                    </button>
+                    <button class="btn btn-secondary" onclick="showPasswordInput()">
+                        <i class="fas fa-key"></i> Password Fallback
+                    </button>
+                </div>
+
+                <div id="password-area" style="display: none;">
+                    <div class="input-group">
+                        <label>Identity String (Password)</label>
+                        <input type="password" id="password" placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div id="camera-area" style="display: none; margin-top: 1.5rem;">
+                    <div style="border: 2px solid var(--primary); border-radius: 16px; overflow: hidden; height: 200px; background: black; position: relative;">
+                        <video id="web-camera" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
+                        <canvas id="capture-canvas" style="display: none;"></canvas>
+                        <div id="camera-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); color: white; font-weight: bold; text-align: center; padding: 1rem;">
+                            Scanning...
+                        </div>
+                    </div>
+                    <p id="retry-count" style="font-size: 0.8rem; color: var(--secondary); margin-top: 0.5rem; text-align: center;"></p>
+                </div>
+
+                <div id="password-login-btn" style="display: none; margin-top: 1rem;">
+                    <button class="btn" onclick="loginWithPassword()">Authorize</button>
+                    <button class="btn btn-secondary" onclick="resetAuth()">Back</button>
+                </div>
+
+                <div id="initial-actions" style="margin-top: 1rem;">
+                    <p style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem;">New to Speech Mech?</p>
+                    <button class="btn btn-secondary" onclick="showRegister()">
+                        <i class="fas fa-user-plus"></i> Create New Identity
+                    </button>
+                </div>
+
+                <div id="register-form" style="display: none; margin-top: 1.5rem; text-align: left;">
+                    <div class="input-group">
+                        <label>New Identity String (Password)</label>
+                        <input type="password" id="reg-password" placeholder="Create a secure string">
+                    </div>
+                    <button class="btn" onclick="performRegistration()">Initialize Identity</button>
+                    <button class="btn btn-secondary" onclick="resetAuth()" style="margin-top: 1rem;">Cancel</button>
+                </div>
+            </div>
+
+            <p id="status-msg" style="margin-top: 1.5rem; font-size: 0.85rem; min-height: 1.2rem;"></p>
+        </div>
+    </div>
+
+    <div class="voice-trigger" id="voiceBtn" onclick="toggleMicPower()">
+        <svg class="mic-svg" viewBox="0 0 24 24">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+    </div>
+
+    <script>
+        let micPowered = false;
+        let recognition = null;
+        let isSpeaking = false;
+        let faceRetries = 0;
+        let selectedUsername = "";
+
+        function setStatus(msg, color) {
+            const el = document.getElementById('status-msg');
+            el.innerText = msg;
+            el.style.color = color;
+        }
+
+        function speak(text) {
+            if (!text) return;
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.onstart = () => {
+                isSpeaking = true;
+                if (recognition) try { recognition.stop(); } catch(e) {}
+            };
+            msg.onend = () => {
+                isSpeaking = false;
+                if (micPowered) {
+                    try { recognition.start(); } catch(e) {}
+                }
+            };
+            window.speechSynthesis.speak(msg);
+        }
+
+        async function initAuthOptions() {
+            const username = document.getElementById('username').value;
+            if (!username) {
+                setStatus('Identity required.', 'red');
+                return;
+            }
+            setStatus('Initializing link...', 'var(--primary)');
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ username, type: 'face_init' })
+            });
+            const data = await res.json();
+            if (data.success) {
+                selectedUsername = data.user;
+                const inputSection = document.getElementById('username').closest('.input-group');
+                if (inputSection) inputSection.style.display = 'none';
+                document.getElementById('initial-actions').style.display = 'none';
+                document.getElementById('auth-options').style.display = 'block';
+                const faceBtn = document.getElementById('btn-face-opt');
+                if (!data.has_face) {
+                    faceBtn.disabled = true;
+                    faceBtn.style.opacity = "0.5";
+                    faceBtn.innerText = "Biometrics Not Set";
+                }
+                speak(`Identity confirmed as ${data.user}. How would you like to login?`);
+                setStatus(`Welcome, ${data.user}. Select protocol.`, 'var(--primary)');
+            } else {
+                setStatus(data.message, 'red');
+            }
+        }
+
+        function showPasswordInput() {
+            document.getElementById('auth-options').style.display = 'none';
+            document.getElementById('password-area').style.display = 'block';
+            document.getElementById('password-login-btn').style.display = 'block';
+            speak("Please enter your identity string.");
+        }
+
+        function showRegister() {
+            const username = document.getElementById('username').value;
+            if (!username) {
+                setStatus('Please enter desired identity first', 'red');
+                return;
+            }
+            document.getElementById('initial-actions').style.display = 'none';
+            document.getElementById('register-form').style.display = 'block';
+            speak("Let's create a new identity for " + username);
+        }
+
+        async function performRegistration() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('reg-password').value;
+            if (!password) {
+                setStatus('Identity string required', 'red');
+                return;
+            }
+            setStatus('Initializing...', 'var(--primary)');
+            const res = await fetch('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setStatus('Identity secured! Please login.', 'var(--primary)');
+                speak("Identity successfully initialized. You may now login.");
+                setTimeout(resetAuth, 2000);
+            } else {
+                setStatus(data.message, 'red');
+            }
+        }
+
+        let videoStream = null;
+
+        async function startWebCamera() {
+            const video = document.getElementById('web-camera');
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                video.srcObject = videoStream;
+            } catch (err) {
+                console.error("Camera access denied:", err);
+                setStatus("Camera access denied. Please enable permissions.", "red");
+            }
+        }
+
+        function stopWebCamera() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            const video = document.getElementById('web-camera');
+            if (video) video.srcObject = null;
+        }
+
+        function captureFrame() {
+            const video = document.getElementById('web-camera');
+            const canvas = document.getElementById('capture-canvas');
+            if (!video || !canvas) return null;
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1); // Flip back to normal for server processing
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 0.8);
+        }
+
+        async function startFaceAuthSequence() {
+            document.getElementById('initial-actions').style.display = 'none';
+            document.getElementById('auth-options').style.display = 'none';
+            document.getElementById('camera-area').style.display = 'block';
+            await startWebCamera();
+            faceRetries = 0;
+            processFaceStep();
+        }
+
+        async function processFaceStep() {
+            if (faceRetries >= 5) {
+                setStatus("Max retries reached. Password fallback engaged.", "#ff4b2b");
+                speak("Face recognition failed 5 times. Reverting to password fallback.");
+                stopWebCamera();
+                setTimeout(showPasswordInput, 1500);
+                return;
+            }
+
+            const overlay = document.getElementById('camera-overlay');
+            overlay.innerText = `Attempt ${faceRetries + 1}/5\nScanning in 3s...`;
+            
+            setTimeout(async () => {
+                const frame = captureFrame();
+                if (!frame) {
+                    setStatus("Failed to capture frame.", "red");
+                    setTimeout(processFaceStep, 2000);
+                    return;
+                }
+
+                overlay.innerText = "Processing Neural Data...";
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        username: selectedUsername, 
+                        type: 'face_step', 
+                        frame: frame 
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    overlay.innerText = "Access Granted.";
+                    setStatus("Neural match confirmed.", "var(--primary)");
+                    speak("Access granted. Welcome back.");
+                    stopWebCamera();
+                    setTimeout(() => window.location.href = '/dashboard', 1000);
+                } else {
+                    faceRetries++;
+                    document.getElementById('retry-count').innerText = `Attempts: ${faceRetries}/5`;
+                    setStatus(data.message, "red");
+                    speak(data.message);
+                    setTimeout(processFaceStep, 2000);
+                }
+            }, 3000);
+        }
+
+        async function loginWithPassword() {
+            const password = document.getElementById('password').value;
+            if (!password) return setStatus('String required', 'red');
+            setStatus('Authenticating...', 'var(--primary)');
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: selectedUsername, password, type: 'password' })
+            });
+            const data = await res.json();
+            if (data.success) window.location.href = '/dashboard';
+            else setStatus(data.message, '#ff4b2b');
+        }
+
+        function resetAuth() {
+            stopWebCamera();
+            fetch('/stop_camera', { method: 'POST' });
+            selectedUsername = "";
+            const inputSection = document.getElementById('username').closest('.input-group');
+            if (inputSection) inputSection.style.display = 'block';
+            document.getElementById('auth-options').style.display = 'none';
+            document.getElementById('password-area').style.display = 'none';
+            document.getElementById('password-login-btn').style.display = 'none';
+            document.getElementById('camera-area').style.display = 'none';
+            document.getElementById('register-form').style.display = 'none';
+            document.getElementById('initial-actions').style.display = 'block';
+            document.getElementById('status-msg').innerText = '';
+        }
+
+        function toggleMicPower() {
+            const btn = document.getElementById('voiceBtn');
+            micPowered = !micPowered;
+            if (micPowered) {
+                btn.style.background = "linear-gradient(135deg, #00f2fe, #4facfe)";
+                startContinuousListening();
+            } else {
+                btn.style.background = "linear-gradient(135deg, #f093fb, #f5576c)";
+                if (recognition) try { recognition.stop(); } catch(e) {}
+            }
+        }
+
+        function startContinuousListening() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.onstart = () => document.getElementById('voiceBtn').classList.add('active');
+            recognition.onresult = async (event) => {
+                if (isSpeaking) return;
+                const command = event.results[0][0].transcript;
+                const usernameField = document.getElementById('username');
+                
+                if (!selectedUsername) {
+                    const cleaned = command.toLowerCase()
+                        .replace(/i am/gi, "")
+                        .replace(/my name is/gi, "")
+                        .replace(/this is/gi, "")
+                        .trim();
+                    usernameField.value = cleaned;
+                    initAuthOptions();
+                } else if (command.toLowerCase().includes("face") || command.toLowerCase().includes("biometric")) {
+                    startFaceAuthSequence();
+                } else if (command.toLowerCase().includes("password")) {
+                    showPasswordInput();
+                }
+            };
+            recognition.onend = () => {
+                document.getElementById('voiceBtn').classList.remove('active');
+                if (micPowered && !isSpeaking) {
+                    try { recognition.start(); } catch(e) {}
+                }
+            };
+            recognition.start();
+        }
+
+        window.onload = () => {
+            speak("Welcome to Speech Mech. Please identify yourself.");
+        };
+    </script>
+</body>
+</html>

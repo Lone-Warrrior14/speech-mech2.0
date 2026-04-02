@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPEECH-MECH | Omni Coder</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .code-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: var(--bg-dark);
+            align-items: center;
+        }
+        #chat-messages {
+            width: 100%;
+            max-width: 1000px;
+            flex: 1;
+        }
+        .chat-input-area {
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="code-container">
+        <header style="width: 100%; padding: 1.5rem 4rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); box-sizing: border-box;">
+            <div style="display: flex; align-items: center; gap: 1rem; cursor: pointer;" onclick="location.href='/dashboard'">
+                <i class="fas fa-chevron-left" style="color: var(--secondary);"></i>
+                <h2 style="margin: 0; font-size: 1.2rem;">OMNI CODER</h2>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn btn-secondary" style="width: auto; padding: 0.5rem 1rem; margin: 0; font-size: 0.8rem;">
+                    <i class="fas fa-terminal"></i> Terminal
+                </button>
+                <button class="btn btn-secondary" style="width: auto; padding: 0.5rem 1rem; margin: 0; font-size: 0.8rem;">
+                    <i class="fas fa-project-diagram"></i> Projects
+                </button>
+            </div>
+        </header>
+
+        <div class="chat-messages" id="chat-messages">
+            <div class="message ai">
+                Uplink established. Omni Coder is online. How can I assist with your development task today?
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <input type="text" id="user-input" placeholder="Describe the code or feature you want to generate..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button class="btn" style="width: auto; margin: 0; padding: 0 1.5rem;" onclick="sendMessage()">
+                <i class="fas fa-bolt"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Global Voice Button -->
+    <div class="voice-trigger" id="voiceBtn" onclick="toggleVoice()">
+        <svg class="mic-svg" viewBox="0 0 24 24">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+    </div>
+
+    <script>
+        let micPowered = false;
+        let recognition = null;
+        let isSpeaking = false;
+
+        function speak(text) {
+            if (!text) return;
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.onstart = () => {
+                isSpeaking = true;
+                if (recognition) try { recognition.stop(); } catch(e) {}
+            };
+            msg.onend = () => {
+                isSpeaking = false;
+                if (micPowered) {
+                    setTimeout(() => {
+                        if (micPowered && !isSpeaking) {
+                            try { recognition.start(); } catch(e) {}
+                        }
+                    }, 300);
+                }
+            };
+            window.speechSynthesis.speak(msg);
+        }
+
+        async function sendMessage(textOverride = null) {
+            const input = document.getElementById('user-input');
+            const text = textOverride || input.value.trim();
+            if (!text) return;
+
+            appendMessage('user', text);
+            input.value = '';
+
+            const response = await fetch('/api/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: text,
+                    mode: 'chat'
+                })
+            });
+            const data = await response.json();
+            appendMessage('ai', data.answer);
+            speak(data.answer);
+        }
+
+        function appendMessage(role, text) {
+            const chat = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            div.innerText = text;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function toggleVoice() {
+            const btn = document.getElementById('voiceBtn');
+            micPowered = !micPowered;
+            if (micPowered) {
+                btn.style.background = "linear-gradient(135deg, #00f2fe, #4facfe)";
+                startContinuousListening();
+            } else {
+                btn.style.background = "linear-gradient(135deg, #f093fb, #f5576c)";
+                if (recognition) try { recognition.stop(); } catch(e) {}
+            }
+        }
+
+        function startContinuousListening() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+
+            recognition.onstart = () => document.getElementById('voiceBtn').classList.add('active');
+            recognition.onresult = async (event) => {
+                if (isSpeaking) return;
+                const command = event.results[0][0].transcript;
+                
+                if (command.toLowerCase().includes("go back") || command.toLowerCase().includes("dashboard")) {
+                    window.location.href = '/dashboard';
+                    return;
+                }
+                
+                document.getElementById('user-input').value = command;
+                sendMessage(command);
+            };
+            recognition.onend = () => {
+                document.getElementById('voiceBtn').classList.remove('active');
+                if (micPowered && !isSpeaking) {
+                    setTimeout(() => {
+                        if (micPowered && !isSpeaking) {
+                            try { recognition.start(); } catch(e) {}
+                        }
+                    }, 300);
+                }
+            };
+            recognition.onerror = () => { micPowered = false; };
+            recognition.start();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Magic - NVIDIA Flux</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #8a2be2;
+            --secondary: #4b0082;
+            --accent: #00ffcc;
+            --bg: #0a0a0c;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            padding: 2rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            padding: 3rem;
+            text-align: center;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #fff, #8a2be2, #00ffcc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        p.subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 2.5rem;
+            font-size: 1.1rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 1.2rem;
+            border-radius: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            color: white;
+            font-size: 1.1rem;
+            resize: none;
+            height: 120px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+        }
+
+        button {
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            border: none;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: fit-content;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(138, 43, 226, 0.4);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        .result-container {
+            margin-top: 3rem;
+            position: relative;
+            min-height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #outputImage {
+            max-width: 100%;
+            border-radius: 20px;
+            display: none;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--glass-border);
+            animation: zoomIn 0.5s ease-out;
+        }
+
+        @keyframes zoomIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .loader {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--glass-border);
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-msg {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        #errorArea {
+            color: #ff4d4d;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Flux AI Image</h1>
+        <p class="subtitle">Magical image generation powered by NVIDIA NVIDIA NVIDIA NVIDIA</p>
+
+        <div class="input-group">
+            <textarea id="promptInput" placeholder="Describe the image you want to create... (e.g. 'a futuristic city at night with flying cars')"></textarea>
+            <button id="generateBtn" onclick="generateImage()">
+                <span id="btnText">🪄 Generate Magic</span>
+            </button>
+        </div>
+
+        <div id="errorArea"></div>
+
+        <div class="result-container">
+            <div class="loader" id="loader">
+                <div class="spinner"></div>
+                <div class="status-msg">Generating your masterpiece...</div>
+            </div>
+            <img id="outputImage" src="" alt="AI Output">
+        </div>
+    </div>
+
+    <script>
+        async function generateImage() {
+            const prompt = document.getElementById('promptInput').value;
+            const btn = document.getElementById('generateBtn');
+            const loader = document.getElementById('loader');
+            const outputImage = document.getElementById('outputImage');
+            const errorArea = document.getElementById('errorArea');
+
+            if (!prompt) {
+                errorArea.innerText = "Please enter a prompt first!";
+                return;
+            }
+
+            errorArea.innerText = "";
+            btn.disabled = true;
+            loader.style.display = 'flex';
+            outputImage.style.display = 'none';
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    outputImage.src = 'data:image/png;base64,' + data.image_b64;
+                    outputImage.style.display = 'block';
+                } else {
+                    errorArea.innerText = "Error: " + data.message;
+                }
+            } catch (err) {
+                errorArea.innerText = "Request failed: " + err.message;
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

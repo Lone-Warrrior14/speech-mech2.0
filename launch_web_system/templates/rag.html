@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPEECH-MECH | RAG Intel</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .rag-container { display: flex; height: 100vh; background: var(--bg-dark); }
+        .sidebar {
+            width: 320px;
+            background: rgba(0, 0, 0, 0.4);
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+        }
+        .main-chat { flex: 1; display: flex; flex-direction: column; }
+        .folder-section { margin-bottom: 2rem; }
+        .folder-section h4 { color: var(--secondary); font-size: 0.8rem; text-transform: uppercase; margin-bottom: 1rem; }
+        .item-list { list-style: none; padding: 0; overflow-y: auto; max-height: 40vh; }
+        .item-list li {
+            padding: 0.8rem 1rem; border-radius: 12px; margin-bottom: 0.3rem;
+            cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 0.8rem;
+            color: #aaa; font-size: 0.9rem;
+        }
+        .item-list li:hover { background: var(--glass); color: white; }
+        .item-list li.active { background: rgba(79, 172, 254, 0.15); color: var(--primary); border: 1px solid rgba(0, 242, 254, 0.3); }
+        .mic-svg { width: 30px; height: 30px; fill: white; }
+    </style>
+</head>
+<body>
+    <div class="rag-container">
+        <aside class="sidebar">
+            <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 2.5rem; cursor: pointer;" onclick="location.href='/dashboard'">
+                <i class="fas fa-chevron-left" style="color: var(--secondary);"></i>
+                <h2 style="margin: 0; font-size: 1.2rem;">RAG INTEL</h2>
+            </div>
+
+            <div class="folder-section">
+                <h4>Folders</h4>
+                <ul class="item-list" id="folder-list"></ul>
+                <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.5rem; margin-top: 0.5rem;" onclick="createNewFolder()">+ New Folder</button>
+            </div>
+
+            <div class="folder-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4>Files in Folder</h4>
+                    <i class="fas fa-sync-alt" style="color: var(--secondary); cursor: pointer; font-size: 0.8rem;" onclick="loadFiles()"></i>
+                </div>
+                <ul class="item-list" id="file-list">
+                    <li style="font-size: 0.8rem; font-style: italic;">Select a folder first</li>
+                </ul>
+            </div>
+        </aside>
+
+        <main class="main-chat">
+            <header class="chat-header" style="padding: 1rem 2rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+                <span id="current-path" style="color: var(--secondary); font-size: 0.9rem;">Intelligence Workspace</span>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-secondary" style="width: auto; padding: 0.5rem 1rem; margin: 0; font-size: 0.8rem;" onclick="uploadFiles(false)">
+                        <i class="fas fa-file-upload"></i> Docs
+                    </button>
+                    <button class="btn btn-secondary" style="width: auto; padding: 0.5rem 1rem; margin: 0; font-size: 0.8rem; background: rgba(121, 40, 202, 0.2);" onclick="uploadFiles(true)">
+                        <i class="fas fa-microphone-alt"></i> Media
+                    </button>
+                </div>
+            </header>
+            <div class="chat-messages" id="chat-messages" style="flex: 1; overflow-y: auto; padding: 2rem;"></div>
+            <div class="chat-input-area" style="padding: 1.5rem 2rem; border-top: 1px solid var(--glass-border); display: flex; gap: 1rem;">
+                <input type="text" id="user-input" placeholder="Query folder intelligence..." onkeypress="if(event.key==='Enter') sendMessage()" style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; padding: 0.8rem 1.5rem; border-radius: 12px;">
+                <button class="btn" style="width: auto; margin: 0; padding: 0 1.5rem;" onclick="sendMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <div class="voice-trigger" id="voiceBtn" onclick="toggleMicPower()">
+        <svg class="mic-svg" viewBox="0 0 24 24">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+    </div>
+
+    <script>
+        let currentFolder = '';
+        let chatHistory = [];
+        let micPowered = false;
+        let recognition = null;
+        let isSpeaking = false;
+
+        function speak(text) {
+            if (!text) return;
+            window.speechSynthesis.cancel();
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.onstart = () => {
+                isSpeaking = true;
+                if (micPowered && recognition) {
+                    try { recognition.stop(); } catch(e) {}
+                }
+            };
+            msg.onend = () => {
+                isSpeaking = false;
+                if (micPowered) {
+                    setTimeout(() => {
+                        if (micPowered && !isSpeaking) {
+                            try { recognition.start(); } catch(e) {}
+                        }
+                    }, 300);
+                }
+            };
+            window.speechSynthesis.speak(msg);
+        }
+
+        window.onload = async () => {
+            await loadFolders();
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('auto_upload')) setTimeout(uploadFiles, 1500);
+            
+            const target = params.get('select_folder');
+            if (target) {
+                const listItems = document.querySelectorAll('#folder-list li');
+                for (let li of listItems) {
+                    if (li.innerText.trim() === target) {
+                        selectFolder(target, li);
+                        break;
+                    }
+                }
+            }
+            
+            // Activate voice system by default
+            setTimeout(toggleMicPower, 1000);
+        };
+
+        function toggleMicPower() {
+            const btn = document.getElementById('voiceBtn');
+            micPowered = !micPowered;
+            if (micPowered) {
+                btn.style.background = "linear-gradient(135deg, #00f2fe, #4facfe)";
+                startContinuousListening();
+            } else {
+                btn.style.background = "linear-gradient(135deg, #f093fb, #f5576c)";
+                if (recognition) recognition.stop();
+            }
+        }
+
+        function startContinuousListening() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+
+            recognition.onstart = () => document.getElementById('voiceBtn').classList.add('active');
+            recognition.onresult = (event) => {
+                if (isSpeaking) return;
+                const command = event.results[0][0].transcript;
+                document.getElementById('user-input').value = command;
+                handleVoiceCommand(command);
+            };
+            recognition.onend = () => {
+                document.getElementById('voiceBtn').classList.remove('active');
+                if (micPowered && !isSpeaking) {
+                    setTimeout(() => {
+                        if (micPowered && !isSpeaking) {
+                            try { recognition.start(); } catch(e) {}
+                        }
+                    }, 300);
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error("RAG Recognition Error:", event.error);
+                if (event.error === 'not-allowed') {
+                    appendMessage('ai', "Microphone access denied. Please check permissions.");
+                }
+            };
+            recognition.start();
+        }
+
+        async function handleVoiceCommand(command) {
+            const low = command.toLowerCase();
+            if (low.includes("go back") || low.includes("dashboard")) window.location.href = '/dashboard';
+            else if (low.includes("upload")) uploadFiles();
+            else if (low.startsWith("+folder") || low.startsWith("select ") || low.includes("select folder")) {
+                const res = await fetch('/api/process_text_command', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ command })
+                });
+                const data = await res.json();
+                
+                if (data.response.startsWith("FOLDER_SELECT:")) {
+                    const targetName = data.response.replace("FOLDER_SELECT:", "");
+                    const listItems = document.querySelectorAll('#folder-list li');
+                    for (let li of listItems) {
+                        if (li.innerText.trim() === targetName) {
+                            selectFolder(targetName, li);
+                            appendMessage('ai', `Neural Link: Folder '${targetName}' selected.`);
+                            speak(`Folder ${targetName} selected.`);
+                            return;
+                        }
+                    }
+                }
+                
+                appendMessage('ai', data.response);
+                if (low.startsWith("+folder")) loadFolders();
+            } else {
+                // Check for global navigation commands first
+                const res = await fetch('/api/process_text_command', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ command })
+                });
+                const data = await res.json();
+                if (data.response.startsWith('NAV:')) {
+                    const target = data.response.replace('NAV:', '').toLowerCase();
+                    if (target === 'dashboard') window.location.href = '/dashboard';
+                    else if (target === 'image_gen') window.location.href = '/image_gen';
+                    else if (target === 'settings') window.location.href = '/settings';
+                    else if (target === 'logout') window.location.href = '/logout';
+                    else if (target === 'media') window.location.href = '/entertainment';
+                    else if (target === 'code') window.location.href = '/code_assist';
+                    return;
+                }
+                
+                sendMessage(command);
+            }
+        }
+
+        async function loadFolders() {
+            const response = await fetch('/get_rag_folders');
+            const folders = await response.json();
+            const list = document.getElementById('folder-list');
+            list.innerHTML = '';
+            folders.forEach(f => {
+                const li = document.createElement('li');
+                li.innerHTML = `<i class="fas fa-folder"></i> ${f}`;
+                li.onclick = () => selectFolder(f, li);
+                list.appendChild(li);
+            });
+        }
+
+        async function createNewFolder() {
+            const name = prompt("Folder Name:");
+            if (name) {
+                await fetch('/api/create_folder', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ name })
+                });
+                loadFolders();
+            }
+        }
+
+        async function selectFolder(folder, el) {
+            currentFolder = folder;
+            document.querySelectorAll('#folder-list li').forEach(li => li.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('current-path').innerText = `Folder: ${folder}`;
+            
+            // Clear current view
+            document.getElementById('chat-messages').innerHTML = '';
+            chatHistory = [];
+
+            // Load History
+            const res = await fetch('/api/get_chat_history', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ folder: currentFolder })
+            });
+            const history = await res.json();
+            history.forEach(chat => {
+                appendMessage('user', chat.user);
+                appendMessage('ai', chat.ai);
+                chatHistory.push({ user: chat.user, ai: chat.ai });
+            });
+            
+            loadFiles();
+        }
+
+        async function loadFiles() {
+            if (!currentFolder) return;
+            const res = await fetch('/get_rag_files', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ folder: currentFolder })
+            });
+            const files = await res.json();
+            const list = document.getElementById('file-list');
+            list.innerHTML = files.length ? '' : '<li style="font-size: 0.8rem; font-style: italic;">No files</li>';
+            files.forEach(f => {
+                const li = document.createElement('li');
+                li.innerHTML = `<i class="fas fa-file-alt"></i> ${f}`;
+                list.appendChild(li);
+            });
+        }
+
+        async function sendMessage(textOverride = null) {
+            const input = document.getElementById('user-input');
+            const text = textOverride || input.value.trim();
+            if (!text || !currentFolder) return;
+            appendMessage('user', text);
+            input.value = '';
+            const response = await fetch('/api/ask', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: text, mode: 'rag',
+                    namespace: `user_{{session['user_id']}}_${currentFolder}`,
+                    history: chatHistory
+                })
+            });
+            const data = await response.json();
+            appendMessage('ai', data.answer);
+            speak(data.answer); // 🗣️ Announce intelligence
+            chatHistory.push({ user: text, ai: data.answer });
+            if (chatHistory.length > 5) chatHistory.shift();
+        }
+
+        function appendMessage(role, text) {
+            const chat = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            div.style.background = role === 'user' ? 'rgba(79, 172, 254, 0.2)' : 'rgba(255, 255, 255, 0.05)';
+            div.style.padding = '1rem'; div.style.borderRadius = '12px'; div.style.marginBottom = '1rem';
+            div.style.maxWidth = '80%'; if (role === 'user') div.style.marginLeft = 'auto';
+            div.innerText = text; chat.appendChild(div); chat.scrollTop = chat.scrollHeight;
+        }
+
+        async function uploadFiles(isMedia = false) {
+            if (!currentFolder) return alert("Select a folder first");
+            await fetch('/api/upload_docs', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    folder: currentFolder,
+                    media: isMedia 
+                })
+            });
+            alert(isMedia ? "Media selection initiated." : "Document selection initiated.");
+        }
+    </script>
+</body>
+</html>

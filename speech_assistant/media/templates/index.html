@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPEECH-MECH | Media Box</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #f093fb;
+            --secondary: #f5576c;
+            --bg-dark: #0a0b1e;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text: #e0e0e0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text);
+            background-image: radial-gradient(circle at top right, rgba(245, 87, 108, 0.1), transparent);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        h2, h3 {
+            background: linear-gradient(135deg, white, var(--primary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-top: 0;
+        }
+
+        .movie-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .movie-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .movie-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--primary);
+        }
+
+        .movie-card i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        video {
+            width: 100%;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <img src="static/img/speech_mech.png" alt="Logo" style="width: 50px; height: 50px;">
+                <div>
+                    <h2 style="font-size: 2rem; margin: 0;">Media Box</h2>
+                    <p style="color: var(--primary); margin: 0.2rem 0 0 0;">High-Fidelity Cinema Experience</p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                {% if role == 'admin' %}
+                <button class="btn" onclick="uploadMedia()">
+                    <i class="fas fa-plus-circle"></i> Upload Media
+                </button>
+                {% endif %}
+                <a href="/dashboard" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Dashboard
+                </a>
+            </div>
+        </header>
+
+        <div class="movie-grid">
+            {% for movie in movies %}
+            <div class="movie-card" onclick="playMovie('{{movie}}')" data-filename="{{movie}}">
+                <i class="fas fa-file-video"></i>
+                <div class="movie-title" style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {{ movie.rsplit('.', 1)[0] }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div id="player-container" class="glass-card" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 id="playing-title" style="margin: 0; font-size: 1.2rem;">Now Playing</h3>
+                <button class="btn btn-secondary" onclick="stopPlayback()" style="padding: 0.4rem 1rem; font-size: 0.8rem;">Close Player</button>
+            </div>
+            <video id="player" controls>
+                <source id="source">
+            </video>
+        </div>
+    </div>
+
+    <!-- Global Voice Button -->
+    <div class="voice-trigger" id="voiceBtn" onclick="toggleVoice()">
+        <svg class="mic-svg" viewBox="0 0 24 24">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+    </div>
+
+    <style>
+        .voice-trigger {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+        }
+        .voice-trigger.active { animation: pulse 1.5s infinite; }
+        .mic-svg { width: 30px; height: 30px; fill: white; }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(240, 147, 251, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(240, 147, 251, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(240, 147, 251, 0); }
+        }
+    </style>
+
+    <script>
+        function playMovie(name) {
+            // Kill any outgoing speech synthesis to focus on movie audio
+            window.speechSynthesis.cancel();
+            
+            document.getElementById("player-container").style.display = "block";
+            const player = document.getElementById("player");
+            const source = document.getElementById("source");
+            const title = document.getElementById("playing-title");
+            
+            player.style.display = "block";
+            source.src = "play/" + name;
+            title.innerText = "Playing: " + name;
+            
+            player.load();
+            player.play();
+            
+            document.getElementById("player-container").scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function stopPlayback() {
+            const player = document.getElementById("player");
+            player.pause();
+            document.getElementById("player-container").style.display = "none";
+        }
+
+        async function uploadMedia() {
+            const res = await fetch('api/upload_media', { method: 'POST' });
+            if (res.ok) alert("Media selection initiated. Please check your screen.");
+        }
+
+        let micPowered = false;
+        let recognition = null;
+        let isSpeaking = false;
+
+        function speak(text) {
+            if (!text) return;
+            window.speechSynthesis.cancel();
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.onstart = () => {
+                isSpeaking = true;
+                if (micPowered && recognition) {
+                    try { recognition.stop(); } catch(e) {}
+                }
+            };
+            msg.onend = () => {
+                isSpeaking = false;
+                if (micPowered) {
+                    setTimeout(() => {
+                        if (micPowered && !isSpeaking) {
+                            try { recognition.start(); } catch(e) {}
+                        }
+                    }, 300);
+                }
+            };
+            window.speechSynthesis.speak(msg);
+        }
+
+        async function toggleVoice() {
+            const btn = document.getElementById('voiceBtn');
+            micPowered = !micPowered;
+            
+            if (micPowered) {
+                btn.style.background = "linear-gradient(135deg, #00f2fe, #4facfe)";
+                startListening();
+            } else {
+                btn.style.background = "linear-gradient(135deg, #f093fb, #f5576c)";
+                if (recognition) try { recognition.stop(); } catch(e) {}
+            }
+        }
+
+        function startListening() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return;
+
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.onstart = () => document.getElementById('voiceBtn').classList.add('active');
+            recognition.onresult = async (event) => {
+                if (isSpeaking) return;
+                const command = event.results[0][0].transcript.toLowerCase();
+                
+                if (command.includes("go back") || command.includes("dashboard") || command.includes("main menu")) {
+                    window.location.href = '/dashboard';
+                } else if (command.includes("logout") || command.includes("sign out")) {
+                    window.location.href = '/logout';
+                } else if (command.includes("setting") || command.includes("profile") || command.includes("password") || command.includes("face")) {
+                    window.location.href = '/settings';
+                } else if (command.includes("play")) {
+                    const cards = document.querySelectorAll('.movie-card');
+                    for (let card of cards) {
+                        const title = card.querySelector('.movie-title').innerText.toLowerCase();
+                        if (command.includes(title)) {
+                            const filename = card.getAttribute('data-filename');
+                            speak("Opening " + title);
+                            playMovie(filename);
+                            return;
+                        }
+                    }
+                } else if (command.includes("stop") || command.includes("close player")) {
+                    speak("Closing player.");
+                    stopPlayback();
+                } else if (command.includes("upload")) {
+                    uploadMedia();
+                }
+            };
+            recognition.onend = () => {
+                document.getElementById('voiceBtn').classList.remove('active');
+                if (micPowered && !isSpeaking) {
+                    setTimeout(() => {
+                        if (micPowered && !isSpeaking) {
+                            try { recognition.start(); } catch(e) {}
+                        }
+                    }, 300);
+                }
+            };
+            recognition.start();
+        }
+
+        window.onload = () => {
+            // System Voice Activation by default
+            setTimeout(toggleVoice, 1000);
+        };
+    </script>
+</body>
+</html>

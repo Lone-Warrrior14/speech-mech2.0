@@ -1,0 +1,26 @@
+USER: what is iot
+AI: The Internet of Things (IoT) is a network of physical objects that are embedded with sensors, software, and technologies to connect and exchange data with other devices and systems over the internet, allowing them to sense, compute, and communicate like living entities.
+---
+USER: what is tcp
+AI: TCP (Transmission Control Protocol) is a set of rules that helps computers communicate with each other over a network, ensuring that data is delivered correctly and in the right order. It's a connection-oriented protocol that establishes a connection between devices before sending data, and it provides error checking, ordered delivery, and congestion control to manage network traffic.
+---
+USER: what happens with cloth
+AI: There is no mention of cloth in the provided context. It seems like the question about cloth is unrelated to the information provided about TCP or Layer.
+---
+USER: what happens with cloth
+AI: There is no information provided in the context about "cloth." It seems to be unrelated to the topic of TCP (Transmission Control Protocol) or Layer (which manages sessions or connections between applications). 
+
+If you could provide more context or clarify what you are asking about clothing, I will do my best to provide a helpful response.
+---
+USER: why is TCP layer used for
+AI: TCP (Transmission Control Protocol) layer is used for managing sessions or connections between applications because it ensures reliable and ordered delivery of data, provides error checking and congestion control. It's ideal for applications that require guaranteed data delivery, such as email, file transfers, and database queries.
+---
+USER: why is TCP layer used for
+AI: TCP (Transmission Control Protocol) is used in the Layer of a network for session or connection management because it provides reliable data transfer. Its key features include:
+
+- Ordered Delivery: Ensuring data is received in the correct order
+- Error Checking: Detecting and re-transmitting corrupted data
+- Congestion Control: Managing network traffic to prevent overload
+
+These features make TCP suitable for applications that require reliability and accurate data transfer, such as email, file transfers, and web browsing.
+---

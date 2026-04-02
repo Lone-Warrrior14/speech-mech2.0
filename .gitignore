@@ -1,10 +1,26 @@
-venv/
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env/
 .env
-vosk-model*/
-model/
-model.zip
-*.wav
-*.mp3
-.idea/
-.vscode/
+
+# Large binaries/Models
+*.zip
+*.tar.gz
+*.pth
+*.h5
+*.model
+vosk-model-*/
+
+# Project specific
+unwanted/
+*.log
+rag_server_boot.log
+server_log.txt
+
+# OS
+.DS_Store
+Thumbs.db
