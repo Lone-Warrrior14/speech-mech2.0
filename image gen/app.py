@@ -4,10 +4,16 @@ import base64
 import os
 import io
 
+from dotenv import load_dotenv
+
+# Load environment from root .env
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(root_dir, ".env"))
+
 app = Flask(__name__)
 
 # Primary: NVIDIA API Configuration (FLUX.2-KLEIN)
-NVIDIA_API_KEY = "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"
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
 INVOKE_URL = "https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.2-klein-4b"
 
 # Backup: Cloudflare Configuration
