@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SPEECH-MECH | Secure Authentication</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Manrope:wght@300;400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#ffb4aa",
+                    "tertiary-fixed": "#ffe16d",
+                    "surface-dim": "#131313",
+                    "tertiary-container": "#c8a900",
+                    "error": "#ffb4ab",
+                    "on-primary-container": "#5c0002",
+                    "on-background": "#e5e2e1",
+                    "secondary-fixed": "#e5e2e1",
+                    "on-surface": "#e5e2e1",
+                    "inverse-surface": "#e5e2e1",
+                    "surface-container-highest": "#353534",
+                    "secondary-container": "#474746",
+                    "surface-variant": "#353534",
+                    "on-tertiary": "#3a3000",
+                    "outline-variant": "#5d3f3b",
+                    "on-tertiary-fixed": "#221b00",
+                    "on-surface-variant": "#e7bdb7",
+                    "on-secondary-fixed": "#1c1b1b",
+                    "on-error-container": "#ffdad6",
+                    "tertiary-fixed-dim": "#e9c400",
+                    "secondary-fixed-dim": "#c8c6c5",
+                    "on-primary": "#690003",
+                    "surface-container-lowest": "#0e0e0e",
+                    "secondary": "#c8c6c5",
+                    "on-tertiary-container": "#4b3e00",
+                    "primary-fixed-dim": "#ffb4aa",
+                    "on-primary-fixed": "#410001",
+                    "tertiary": "#e9c400",
+                    "background": "#131313",
+                    "surface-container-low": "#1c1b1b",
+                    "primary-container": "#ff5545",
+                    "surface-container-high": "#2a2a2a",
+                    "primary": "#ffb4aa",
+                    "error-container": "#93000a",
+                    "inverse-on-surface": "#313030",
+                    "on-secondary-fixed-variant": "#474746",
+                    "inverse-primary": "#c0000a",
+                    "primary-fixed": "#ffdad5",
+                    "surface": "#131313",
+                    "on-primary-fixed-variant": "#930005",
+                    "on-tertiary-fixed-variant": "#544600",
+                    "surface-container": "#201f1f",
+                    "on-secondary": "#313030",
+                    "surface-bright": "#3a3939",
+                    "outline": "#ad8883",
+                    "on-secondary-container": "#b7b5b4",
+                    "on-error": "#690005"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Space Grotesk"],
+                    "body": ["Manrope"],
+                    "label": ["Space Grotesk"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .biometric-glow {
+            box-shadow: 0 0 30px rgba(255, 180, 170, 0.1);
+        }
+        .crimson-gradient {
+            background: linear-gradient(135deg, #ffb4aa 0%, #ff5545 100%);
+        }
+        .obsidian-glass {
+            background: rgba(28, 27, 27, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary-container selection:text-on-primary-container overflow-hidden min-h-screen flex items-center justify-center">
+<!-- Abstract Neural Background -->
+<div class="fixed inset-0 z-0">
+<div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(255,180,170,0.05),_transparent_70%)]"></div>
+<div class="absolute top-0 left-0 w-full h-full opacity-20" data-alt="Deep obsidian crystalline structure with faint glowing red neural networks and abstract geometric patterns in low light" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAVUbQL2Mvr-qresNwMfdyB1hZ9eD3CuuL_Wz1VJHV6KmjpU-0WAjmBcQgZsdk-4RUZcfxbLfHm0Kvw-PISNob0FVIxaFed6rjacnexj8mo3IJA-mpoUxnwa7vVF5-kvj7ANxwG95d9ELdBDEJfGmj0F-ZS4knXXcXKrA5Cb2MTEvcf2B8LTY1kN7g2BGJTh6bW1gtLtj0QEwgVHVpZjJ83SDRkFNZp98eSuTPe9KdeLK_o_3ta-F5RG2DpHguzuT1GvgJVsvDi7VY'); background-size: cover; background-position: center;"></div>
+</div>
+<!-- Main Authentication Shell -->
+<main class="relative z-10 w-full max-w-md px-6">
+<!-- Brand Anchor -->
+<div class="mb-12 text-center">
+<h1 class="font-headline text-4xl font-bold tracking-tighter text-primary">
+                SPEECH-MECH
+            </h1>
+<p class="font-label text-[10px] uppercase tracking-[0.3em] text-on-surface-variant mt-2">
+                Quantum Neural Processing Unit
+            </p>
+</div>
+<!-- Glassmorphic Card -->
+<div class="obsidian-glass rounded-xl p-8 biometric-glow relative border border-outline-variant/10">
+<!-- Contextual Header -->
+<div class="mb-10">
+<h2 class="font-headline text-2xl font-medium tracking-tight text-on-surface">Secure Access</h2>
+<div class="h-[2px] w-8 crimson-gradient mt-2"></div>
+</div>
+<!-- Primary Auth Actions (Asymmetric Layout) -->
+<div class="space-y-6">
+<!-- Biometric Entry Point -->
+<button class="group relative w-full flex items-center justify-between p-5 bg-surface-container-lowest rounded-lg hover:bg-surface-container-low transition-all duration-500 overflow-hidden">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-highest group-hover:scale-110 transition-transform duration-500">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="face">face</span>
+</div>
+<div class="text-left">
+<p class="font-headline text-sm font-semibold text-on-surface">Neural Face Scan</p>
+<p class="font-body text-[11px] text-on-surface-variant">Initialize facial recognition</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform" data-icon="arrow_forward_ios">arrow_forward_ios</span>
+<!-- Decorative Left Stripe -->
+<div class="absolute left-0 top-0 bottom-0 w-[2px] crimson-gradient opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</button>
+<!-- Voice Entry Point -->
+<button class="group relative w-full flex items-center justify-between p-5 bg-surface-container-lowest rounded-lg hover:bg-surface-container-low transition-all duration-500 overflow-hidden">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-highest group-hover:scale-110 transition-transform duration-500">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="mic_external_on">mic_external_on</span>
+</div>
+<div class="text-left">
+<p class="font-headline text-sm font-semibold text-on-surface">Voice Authentication</p>
+<p class="font-body text-[11px] text-on-surface-variant">Analyze vocal waveform signature</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform" data-icon="arrow_forward_ios">arrow_forward_ios</span>
+<!-- Decorative Left Stripe -->
+<div class="absolute left-0 top-0 bottom-0 w-[2px] crimson-gradient opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</button>
+</div>
+<!-- Secondary Input Field (Recessed Look) -->
+<div class="mt-10 pt-10 border-t border-outline-variant/10">
+<div class="space-y-4">
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border-none focus:ring-1 focus:ring-primary/30 rounded-lg py-3 px-4 text-sm font-body text-on-surface placeholder:text-on-surface-variant/40 transition-all" placeholder="Access Code" type="text"/>
+<div class="absolute right-3 top-1/2 -translate-y-1/2">
+<span class="material-symbols-outlined text-on-surface-variant text-lg" data-icon="key">key</span>
+</div>
+</div>
+<button class="w-full crimson-gradient text-on-primary py-4 text-xs font-headline font-bold uppercase tracking-widest rounded-lg hover:shadow-[0_0_20px_rgba(255,85,69,0.3)] active:scale-95 transition-all duration-300">
+                        Authorize Terminal
+                    </button>
+</div>
+</div>
+<!-- Technical Metadata Footer -->
+<div class="mt-8 flex justify-between items-center px-1">
+<span class="font-label text-[9px] text-on-surface-variant/50 tracking-tighter">NODE: OBSIDIAN-01</span>
+<span class="font-label text-[9px] text-tertiary uppercase tracking-widest">Quantum Shield Active</span>
+</div>
+</div>
+<!-- Auxiliary Links -->
+<div class="mt-8 flex justify-center gap-8">
+<a class="font-label text-[10px] text-on-surface-variant hover:text-primary transition-colors tracking-widest uppercase" href="#">Emergency Access</a>
+<a class="font-label text-[10px] text-on-surface-variant hover:text-primary transition-colors tracking-widest uppercase" href="#">System Logs</a>
+</div>
+</main>
+<!-- Bottom Status Bar (Non-Nav) -->
+<footer class="fixed bottom-0 w-full p-6 flex justify-between items-end z-10 pointer-events-none">
+<div class="opacity-30">
+<p class="font-headline text-[8px] tracking-widest text-on-surface-variant leading-none">CORE TEMPERATURE</p>
+<p class="font-headline text-lg font-bold text-primary">32.4°C</p>
+</div>
+<div class="text-right opacity-30">
+<p class="font-headline text-[8px] tracking-widest text-on-surface-variant leading-none">NEURAL LATENCY</p>
+<p class="font-headline text-lg font-bold text-tertiary">0.02ms</p>
+</div>
+</footer>
+</body></html>

@@ -65,6 +65,10 @@ def route_intent(intent, command):
             process_name = APPS[app_name]["process"]
             os.system(f"taskkill /IM {process_name} /F")
             return f"Closing {app_name}."
+    
+    if intent == "image_gen":
+        prompt = command.replace("generate", "").replace("create", "").replace("make", "").replace("image", "").replace("picture", "").replace("of ", "").replace("a ", "").replace("an ", "").strip()
+        return f"GEN_IMAGE:{prompt}"
 
     # 🔹 TIME
     if intent == "ask_time":

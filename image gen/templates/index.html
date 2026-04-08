@@ -58,6 +58,7 @@
             margin-bottom: 0.5rem;
             background: linear-gradient(to right, #fff, #8a2be2, #00ffcc);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             letter-spacing: -1px;
         }
@@ -192,6 +193,11 @@
 </head>
 <body>
     <div class="container">
+        <div style="position: absolute; top: 1.5rem; left: 1.5rem;">
+            <button onclick="location.href=window.location.origin.replace(':5000', ':8000') + '/dashboard'" style="padding: 0.5rem 1rem; font-size: 0.9rem; background: var(--glass); border: 1px solid var(--glass-border);">
+                <i class="fas fa-arrow-left"></i> Home
+            </button>
+        </div>
         <h1>Flux AI Image</h1>
         <p class="subtitle">Magical image generation powered by NVIDIA NVIDIA NVIDIA NVIDIA</p>
 
@@ -204,7 +210,7 @@
 
         <div id="errorArea"></div>
 
-        <div class="result-container">
+    <div class="result-container">
             <div class="loader" id="loader">
                 <div class="spinner"></div>
                 <div class="status-msg">Generating your masterpiece...</div>
@@ -213,7 +219,129 @@
         </div>
     </div>
 
+    <!-- Global Voice Command Button -->
+    <div class="voice-trigger" id="voiceBtn" onclick="toggleMicPower()">
+        <svg class="mic-svg" viewBox="0 0 24 24" style="width: 30px; height: 30px; fill: white;">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+    </div>
+
+    <style>
+        .voice-trigger {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(138, 43, 226, 0.4);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+        }
+        .voice-trigger:hover { transform: scale(1.1); }
+        .voice-trigger.active {
+            background: #ff4d4d;
+            box-shadow: 0 0 20px rgba(255, 77, 77, 0.5);
+            animation: pulse-red 1.5s infinite;
+        }
+        @keyframes pulse-red {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+
     <script>
+        let micPowered = false;
+        let recognition = null;
+        let isSpeaking = false;
+
+        function speak(text) {
+            if (!text) return;
+            window.speechSynthesis.cancel();
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.onstart = () => { isSpeaking = true; };
+            msg.onend = () => {
+                isSpeaking = false;
+                if (micPowered) {
+                    setTimeout(() => { if (micPowered && !isSpeaking) try { recognition.start(); } catch(e) {} }, 300);
+                }
+            };
+            window.speechSynthesis.speak(msg);
+        }
+
+        function toggleMicPower() {
+            const btn = document.getElementById('voiceBtn');
+            micPowered = !micPowered;
+            if (micPowered) {
+                btn.classList.add('active');
+                startContinuousListening();
+            } else {
+                btn.classList.remove('active');
+                if (recognition) try { recognition.stop(); } catch(e) {}
+            }
+        }
+
+        function startContinuousListening() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+
+            recognition.onresult = async (event) => {
+                if (isSpeaking) return;
+                const command = event.results[0][0].transcript;
+                document.getElementById('promptInput').value = command;
+                
+                // First, check with the main server for intents (navigation etc.)
+                try {
+                    // Assuming dashboard is on port 8000
+                    const dashboard_url = window.location.origin.replace(':5000', ':8000');
+                    const res = await fetch(`${dashboard_url}/api/process_text_command`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ command })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.response.startsWith('NAV:')) {
+                        const target = data.response.replace('NAV:', '').toLowerCase();
+                        if (target === 'rag') window.location.href = dashboard_url + '/rag';
+                        else if (target === 'media') window.location.href = dashboard_url + '/entertainment';
+                        else if (target === 'code') window.location.href = dashboard_url + '/code_assist';
+                        else if (target === 'dashboard' || target === 'main' || target === 'home') window.location.href = dashboard_url + '/dashboard';
+                        else if (target === 'settings') window.location.href = dashboard_url + '/settings';
+                        else if (target === 'logout') window.location.href = dashboard_url + '/logout';
+                        return;
+                    } else if (data.response.startsWith("GEN_IMAGE:")) {
+                        const cleanPrompt = data.response.replace("GEN_IMAGE:", "");
+                        document.getElementById('promptInput').value = cleanPrompt;
+                        generateImage();
+                        return;
+                    }
+                } catch(e) {
+                    console.log("Could not reach dashboard for intent detection, using raw command.");
+                }
+
+                // Default behavior: use the command as a prompt
+                generateImage();
+            };
+
+            recognition.onend = () => {
+                if (micPowered && !isSpeaking) {
+                    setTimeout(() => { if (micPowered && !isSpeaking) try { recognition.start(); } catch(e) {} }, 300);
+                }
+            };
+            recognition.start();
+        }
+
         async function generateImage() {
             const prompt = document.getElementById('promptInput').value;
             const btn = document.getElementById('generateBtn');
@@ -221,10 +349,7 @@
             const outputImage = document.getElementById('outputImage');
             const errorArea = document.getElementById('errorArea');
 
-            if (!prompt) {
-                errorArea.innerText = "Please enter a prompt first!";
-                return;
-            }
+            if (!prompt) return;
 
             errorArea.innerText = "";
             btn.disabled = true;
@@ -234,19 +359,17 @@
             try {
                 const response = await fetch('/generate', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: prompt })
                 });
-
                 const data = await response.json();
-
                 if (data.status === 'success') {
                     outputImage.src = 'data:image/png;base64,' + data.image_b64;
                     outputImage.style.display = 'block';
+                    speak("Image generated successfully.");
                 } else {
                     errorArea.innerText = "Error: " + data.message;
+                    speak("I failed to generate the image.");
                 }
             } catch (err) {
                 errorArea.innerText = "Request failed: " + err.message;
@@ -255,6 +378,17 @@
                 loader.style.display = 'none';
             }
         }
+
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const autoPrompt = urlParams.get('auto_prompt');
+            if (autoPrompt) {
+                document.getElementById('promptInput').value = autoPrompt;
+                generateImage();
+            }
+            // Auto-enable mic if preferred, but let's keep it safe
+             setTimeout(toggleMicPower, 1000);
+        };
     </script>
 </body>
 </html>

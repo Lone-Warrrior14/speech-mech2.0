@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NEURAL_OS | SPEECH-MECH</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Manrope:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "inverse-on-surface": "#313030",
+                    "surface-container-low": "#1c1b1b",
+                    "on-tertiary-container": "#4b3e00",
+                    "on-secondary": "#313030",
+                    "on-primary-fixed": "#410001",
+                    "tertiary-fixed-dim": "#e9c400",
+                    "on-tertiary-fixed": "#221b00",
+                    "error-container": "#93000a",
+                    "on-tertiary-fixed-variant": "#544600",
+                    "surface": "#131313",
+                    "on-surface-variant": "#e7bdb7",
+                    "surface-container": "#201f1f",
+                    "secondary": "#c8c6c5",
+                    "primary-fixed": "#ffdad5",
+                    "error": "#ffb4ab",
+                    "on-error": "#690005",
+                    "on-secondary-container": "#b7b5b4",
+                    "background": "#131313",
+                    "on-secondary-fixed-variant": "#474746",
+                    "surface-tint": "#ffb4aa",
+                    "outline": "#ad8883",
+                    "on-background": "#e5e2e1",
+                    "outline-variant": "#5d3f3b",
+                    "on-secondary-fixed": "#1c1b1b",
+                    "on-primary-container": "#5c0002",
+                    "tertiary-container": "#c8a900",
+                    "surface-bright": "#3a3939",
+                    "on-primary-fixed-variant": "#930005",
+                    "surface-container-lowest": "#0e0e0e",
+                    "on-surface": "#e5e2e1",
+                    "tertiary-fixed": "#ffe16d",
+                    "secondary-container": "#474746",
+                    "primary-container": "#ff5545",
+                    "surface-dim": "#131313",
+                    "on-primary": "#690003",
+                    "on-error-container": "#ffdad6",
+                    "primary-fixed-dim": "#ffb4aa",
+                    "surface-variant": "#353534",
+                    "primary": "#ffb4aa",
+                    "inverse-primary": "#c0000a",
+                    "inverse-surface": "#e5e2e1",
+                    "on-tertiary": "#3a3000",
+                    "secondary-fixed": "#e5e2e1",
+                    "tertiary": "#e9c400",
+                    "surface-container-highest": "#353534",
+                    "surface-container-high": "#2a2a2a",
+                    "secondary-fixed-dim": "#c8c6c5"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Space Grotesk"],
+                    "body": ["Manrope"],
+                    "label": ["Space Grotesk"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; background-color: #131313; color: #e5e2e1; }
+        .font-headline { font-family: 'Space Grotesk', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glow-primary:active { box-shadow: 0 0 15px #ffb4aa; }
+        .glass-panel { backdrop-filter: blur(20px); }
+        .crimson-pulse { background: linear-gradient(135deg, #ffb4aa 0%, #ff5545 100%); }
+        .tonal-transition-no-lines { border-bottom: 1px solid rgba(93, 63, 59, 0.15); }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0e0e0e; }
+        ::-webkit-scrollbar-thumb { background: #353534; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-background text-on-background selection:bg-primary-container selection:text-white">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full border-b border-[#5d3f3b]/15 bg-[#131313]/80 backdrop-blur-xl z-[100] shadow-[0_0_20px_rgba(255,59,48,0.05)]">
+<div class="flex justify-between items-center px-8 h-20 max-w-full mx-auto">
+<div class="text-2xl font-bold tracking-tighter text-[#ffb4aa] font-headline">NEURAL_OS</div>
+<div class="hidden md:flex items-center space-x-12">
+<a class="font-['Space_Grotesk'] tracking-widest uppercase text-sm text-[#ffb4aa] border-b-2 border-[#ffb4aa] pb-1" href="#">Nodes</a>
+<a class="font-['Space_Grotesk'] tracking-widest uppercase text-sm text-[#e7bdb7] hover:text-[#e5e2e1] transition-all duration-300" href="#">History</a>
+<a class="font-['Space_Grotesk'] tracking-widest uppercase text-sm text-[#e7bdb7] hover:text-[#e5e2e1] transition-all duration-300" href="#">Settings</a>
+</div>
+<div class="flex items-center space-x-6">
+<button class="hover:bg-[#ffb4aa]/10 transition-all duration-300 p-2 rounded-sm active:scale-95">
+<span class="material-symbols-outlined text-[#ffb4aa]">account_circle</span>
+</button>
+</div>
+</div>
+</nav>
+<!-- Main Workspace -->
+<main class="min-h-screen pt-32 pb-32 px-6 lg:px-24 flex flex-col items-center">
+<!-- Header Intent -->
+<div class="w-full max-w-6xl mb-12 flex flex-col md:flex-row justify-between items-end gap-6">
+<div class="text-left">
+<span class="text-label-sm font-headline uppercase tracking-[0.3em] text-primary/60 mb-2 block">System Active</span>
+<h1 class="text-5xl md:text-7xl font-headline font-bold text-on-surface tracking-tighter leading-none">SPEECH-MECH<span class="text-primary">.</span></h1>
+</div>
+<div class="text-right hidden md:block">
+<p class="text-on-surface-variant font-body max-w-xs text-sm leading-relaxed opacity-70">
+                    Neural RAG interface for real-time document intelligence and semantic extraction via voice protocol.
+                </p>
+</div>
+</div>
+<!-- Floating Context Panels (Instead of Sidebars) -->
+<div class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
+<!-- Document Manifest Panel -->
+<div class="lg:col-span-4 space-y-6">
+<div class="bg-surface-container-low/60 glass-panel p-8 rounded-xl border border-outline-variant/10 shadow-xl group hover:border-primary/20 transition-all duration-500">
+<div class="flex justify-between items-center mb-6">
+<h2 class="font-headline font-bold text-lg text-on-surface">Entity_Vault</h2>
+<span class="material-symbols-outlined text-primary text-sm">folder_open</span>
+</div>
+<div class="space-y-4">
+<div class="flex items-center justify-between group/item cursor-pointer">
+<div class="flex items-center space-x-3">
+<span class="material-symbols-outlined text-secondary/40 text-lg">description</span>
+<span class="text-sm font-body text-on-surface-variant group-hover/item:text-primary transition-colors">Project_Onyx_Brief.pdf</span>
+</div>
+<span class="text-[10px] font-headline text-outline/40">2.4MB</span>
+</div>
+<div class="flex items-center justify-between group/item cursor-pointer">
+<div class="flex items-center space-x-3">
+<span class="material-symbols-outlined text-secondary/40 text-lg">article</span>
+<span class="text-sm font-body text-on-surface-variant group-hover/item:text-primary transition-colors">Neural_Mapping_V4.txt</span>
+</div>
+<span class="text-[10px] font-headline text-outline/40">12KB</span>
+</div>
+<div class="flex items-center justify-between group/item cursor-pointer">
+<div class="flex items-center space-x-3">
+<span class="material-symbols-outlined text-secondary/40 text-lg">database</span>
+<span class="text-sm font-body text-on-surface-variant group-hover/item:text-primary transition-colors">Sector_7_Raw_Telemetry</span>
+</div>
+<span class="text-[10px] font-headline text-outline/40">456KB</span>
+</div>
+</div>
+<button class="mt-8 w-full py-3 border border-outline-variant/30 text-xs font-headline tracking-widest uppercase hover:bg-primary/5 hover:border-primary/40 transition-all active:scale-95">
+                        Ingest New Data
+                    </button>
+</div>
+<div class="bg-surface-container-lowest/40 glass-panel p-8 rounded-xl border border-outline-variant/5">
+<h3 class="font-headline font-bold text-xs text-on-tertiary-fixed-variant uppercase tracking-widest mb-4">Network_Status</h3>
+<div class="flex items-center space-x-4 mb-4">
+<div class="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_#e9c400]"></div>
+<span class="text-xs font-body text-on-surface-variant">RAG Latency: 42ms</span>
+</div>
+<div class="w-full bg-surface-container h-1 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-2/3 shadow-[0_0_10px_#ffb4aa]"></div>
+</div>
+</div>
+</div>
+<!-- Central Visualizer & Intelligence Output -->
+<div class="lg:col-span-8 flex flex-col space-y-8">
+<!-- Voice Activity Visualizer -->
+<div class="bg-surface-container p-12 rounded-xl flex flex-col items-center justify-center relative overflow-hidden min-h-[400px]">
+<!-- Background Ambient Image -->
+<div class="absolute inset-0 opacity-10 grayscale hover:grayscale-0 transition-all duration-700 pointer-events-none">
+<img class="w-full h-full object-cover" data-alt="abstract neural network visualization with flowing lines and glowing nodes in a dark obsidian space" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4izHgF_k1y55fbJKM_mB9ninj0FtmHZ36VhPhsEZNOsMmQQN4KCcSvRrkW0fOGsRcya974j3iRu9CUG8iSvh5-8oKsJxUkdxm9Wmm-Tdp1lOiXbNF_b-NA_mWKlSzjuKOOguZ2yPhhXA0sFKrp7aezjB-UjxAniGqY8yMCmODeQ-jcurffUKqdgyykskcp9Q3MFjKUUsWSEkd9oQWxYmV-DgaI_R1tDdmfb9aTLQshWgcrP2pthsWnmtuqKbetkV933RFexokwHo"/>
+</div>
+<div class="relative z-10 flex flex-col items-center">
+<div class="flex items-end justify-center space-x-2 mb-10 h-32">
+<div class="w-1 bg-primary/20 rounded-full h-12"></div>
+<div class="w-1 bg-primary/40 rounded-full h-24"></div>
+<div class="w-1 crimson-pulse rounded-full h-32 shadow-[0_0_20px_#ffb4aa]"></div>
+<div class="w-1 bg-primary/60 rounded-full h-20"></div>
+<div class="w-1 bg-primary/30 rounded-full h-14"></div>
+<div class="w-1 bg-primary/80 rounded-full h-28 shadow-[0_0_15px_#ffb4aa]"></div>
+<div class="w-1 crimson-pulse rounded-full h-16"></div>
+</div>
+<p class="font-headline text-lg tracking-widest text-on-surface animate-pulse mb-2">LISTENING_PROTOCOLS_ENGAGED</p>
+<p class="font-body text-sm text-on-surface-variant/60 italic">"Analyze the thermal variance in Sector 7 from the Onyx brief..."</p>
+</div>
+<!-- Voice Trigger Button (Floating in center) -->
+<div class="absolute bottom-8 flex space-x-4">
+<button class="w-16 h-16 rounded-sm crimson-pulse flex items-center justify-center shadow-[0_0_30px_#ff5545] active:scale-95 transition-transform group">
+<span class="material-symbols-outlined text-white text-3xl group-hover:scale-110 transition-transform" style="font-variation-settings: 'FILL' 1;">mic</span>
+</button>
+</div>
+</div>
+<!-- Live Stream Results -->
+<div class="bg-surface-container-high p-8 rounded-xl border-l-2 border-primary">
+<div class="flex justify-between items-start mb-6">
+<div class="flex items-center space-x-3">
+<span class="material-symbols-outlined text-primary">psychology</span>
+<h2 class="font-headline font-bold text-lg text-on-surface">Neural_Recall_Stream</h2>
+</div>
+<span class="text-[10px] font-headline text-primary tracking-widest">REALTIME_RAG</span>
+</div>
+<div class="space-y-6">
+<div class="p-4 bg-surface-container-lowest/50 rounded-lg border border-outline-variant/10">
+<p class="text-sm font-body text-on-surface leading-relaxed">
+<span class="text-primary font-bold mr-2">Query Detected:</span> "Cross-reference thermal data with Project Onyx parameters."
+                            </p>
+</div>
+<div class="space-y-4">
+<p class="text-md font-body text-on-surface-variant leading-relaxed">
+                                Initial analysis suggests a <span class="text-primary font-bold">14.2% variance</span> in baseline temperatures compared to the specified parameters in <span class="text-tertiary">Onyx_Brief.pdf (Page 42)</span>. The anomaly appears concentrated around the primary node clusters...
+                            </p>
+<div class="flex gap-2">
+<span class="px-3 py-1 bg-surface-container-highest rounded-full text-[10px] font-headline text-outline tracking-wider uppercase">Source: Onyx_Brief</span>
+<span class="px-3 py-1 bg-surface-container-highest rounded-full text-[10px] font-headline text-outline tracking-wider uppercase">Confidence: 0.98</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Secondary Insights (Asymmetric Layout) -->
+<div class="w-full max-w-6xl flex flex-col md:flex-row gap-8">
+<div class="flex-1 bg-surface-container-low p-10 rounded-xl group hover:bg-surface-container-high transition-colors">
+<h4 class="font-headline font-bold text-sm text-primary mb-8 tracking-widest uppercase">Entity Relationships</h4>
+<div class="grid grid-cols-2 gap-4">
+<div class="p-4 bg-surface-container rounded border border-outline-variant/5">
+<p class="text-[10px] font-headline text-outline mb-1 uppercase">Primary Node</p>
+<p class="text-sm font-body text-on-surface">Onyx_Base_1</p>
+</div>
+<div class="p-4 bg-surface-container rounded border border-outline-variant/5">
+<p class="text-[10px] font-headline text-outline mb-1 uppercase">Related Ops</p>
+<p class="text-sm font-body text-on-surface">Sector_7_Ref</p>
+</div>
+</div>
+</div>
+<div class="w-full md:w-1/3 bg-surface-container-lowest border border-outline-variant/10 p-10 rounded-xl relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4">
+<span class="material-symbols-outlined text-tertiary/20 text-6xl">warning</span>
+</div>
+<h4 class="font-headline font-bold text-sm text-tertiary mb-4 tracking-widest uppercase">System Warning</h4>
+<p class="text-xs font-body text-on-surface-variant leading-relaxed opacity-60">
+                    Multiple document semantic overlaps detected in "Neural_Mapping_V4.txt". RAG confidence score drifting below 0.85 for specific technical definitions. 
+                </p>
+<button class="mt-6 text-[10px] font-headline text-tertiary hover:underline uppercase tracking-widest">Re-Index Documents</button>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (For Mobile Viewport) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pb-6 bg-[#131313]/90 backdrop-blur-2xl shadow-[0_-10px_40px_rgba(255,59,48,0.1)] h-24">
+<button class="flex flex-col items-center justify-center text-[#e7bdb7] opacity-60 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined">psychology</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium">Analyze</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-gradient-to-br from-[#ffb4aa] to-[#ff5545] text-white rounded-sm p-4 scale-110 shadow-[0_0_15px_#ffb4aa]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">graphic_eq</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium">Neural_Pulse</span>
+</button>
+<button class="flex flex-col items-center justify-center text-[#e7bdb7] opacity-60 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined">settings_backup_restore</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium">Recall</span>
+</button>
+</nav>
+</body></html>

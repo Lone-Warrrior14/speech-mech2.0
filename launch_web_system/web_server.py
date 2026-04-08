@@ -317,7 +317,9 @@ def register_face_direct():
     if frame_b64:
         frame = decode_base64_image(frame_b64)
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        encodings = face_recognition.face_encodings(rgb_frame)
+        # 🔎 Enhanced Neural Detection (Upsampled)
+        locations = face_recognition.face_locations(rgb_frame, number_of_times_to_upsample=2)
+        encodings = face_recognition.face_encodings(rgb_frame, known_face_locations=locations)
         
         if len(encodings) > 0:
             if 'reg_epochs' not in session: session['reg_epochs'] = []
@@ -367,7 +369,9 @@ def register_face_direct():
         is_real = is_real_face(frame)
         
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        encodings = face_recognition.face_encodings(rgb_frame)
+        # 🔎 Enhanced Neural Detection (Upsampled)
+        locations = face_recognition.face_locations(rgb_frame, number_of_times_to_upsample=2)
+        encodings = face_recognition.face_encodings(rgb_frame, known_face_locations=locations)
         
         if len(encodings) > 0:
             print(f"[AUTH] Epoch {len(epochs)+1} synchronized. (Liveness: {is_real})")

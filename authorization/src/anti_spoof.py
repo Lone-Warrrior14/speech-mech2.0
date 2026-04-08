@@ -12,17 +12,21 @@ model_test = AntiSpoofPredict(0)
 image_cropper = CropImage()
 
 def is_real_face(frame, threshold=0.15):
-    # --- FAIL-SAFE MOVED TO TOP ---
-    if not os.path.exists(MODEL_DIR) or not os.listdir(MODEL_DIR):
-        # If models are not yet extracted or in the wrong place, 
-        # we allow the base biometric to work to unblock the user.
-        return True 
-    # ------------------------------
-
     image_bbox = model_test.get_bbox(frame)
     if image_bbox is None:
         print("[NEURAL-DIAG] No face box detected in frame.")
         return False
+
+    prediction = np.zeros((1,3))
+    
+    if not os.path.exists(MODEL_DIR):
+        print(f"[NEURAL-DIAG] Model directory missing: {MODEL_DIR}")
+        return True # Fallback to success if models are missing to unblock user
+
+    model_list = os.listdir(MODEL_DIR)
+    if not model_list:
+        print(f"[NEURAL-DIAG] No .pth models found in: {MODEL_DIR}")
+        return True # Fallback
 
     for model_name in model_list:
         model_path = os.path.join(MODEL_DIR, model_name)

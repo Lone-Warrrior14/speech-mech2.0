@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SPEECH-MECH | Image Synthesis</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-tint": "#ffb4aa",
+                      "tertiary-fixed": "#ffe16d",
+                      "surface-dim": "#131313",
+                      "tertiary-container": "#c8a900",
+                      "error": "#ffb4ab",
+                      "on-primary-container": "#5c0002",
+                      "on-background": "#e5e2e1",
+                      "secondary-fixed": "#e5e2e1",
+                      "on-surface": "#e5e2e1",
+                      "inverse-surface": "#e5e2e1",
+                      "surface-container-highest": "#353534",
+                      "secondary-container": "#474746",
+                      "surface-variant": "#353534",
+                      "on-tertiary": "#3a3000",
+                      "outline-variant": "#5d3f3b",
+                      "on-tertiary-fixed": "#221b00",
+                      "on-surface-variant": "#e7bdb7",
+                      "on-secondary-fixed": "#1c1b1b",
+                      "on-error-container": "#ffdad6",
+                      "tertiary-fixed-dim": "#e9c400",
+                      "secondary-fixed-dim": "#c8c6c5",
+                      "on-primary": "#690003",
+                      "surface-container-lowest": "#0e0e0e",
+                      "secondary": "#c8c6c5",
+                      "on-tertiary-container": "#4b3e00",
+                      "primary-fixed-dim": "#ffb4aa",
+                      "on-primary-fixed": "#410001",
+                      "tertiary": "#e9c400",
+                      "background": "#131313",
+                      "surface-container-low": "#1c1b1b",
+                      "primary-container": "#ff5545",
+                      "surface-container-high": "#2a2a2a",
+                      "primary": "#ffb4aa",
+                      "error-container": "#93000a",
+                      "inverse-on-surface": "#313030",
+                      "on-secondary-fixed-variant": "#474746",
+                      "inverse-primary": "#c0000a",
+                      "primary-fixed": "#ffdad5",
+                      "surface": "#131313",
+                      "on-primary-fixed-variant": "#930005",
+                      "on-tertiary-fixed-variant": "#544600",
+                      "surface-container": "#201f1f",
+                      "on-secondary": "#313030",
+                      "surface-bright": "#3a3939",
+                      "outline": "#ad8883",
+                      "on-secondary-container": "#b7b5b4",
+                      "on-error": "#690005"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "fontFamily": {
+                      "headline": ["Space Grotesk"],
+                      "body": ["Manrope"],
+                      "label": ["Space Grotesk"]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            backdrop-filter: blur(20px);
+        }
+        .crimson-glow {
+            box-shadow: 0 0 40px rgba(255, 180, 170, 0.05);
+        }
+        .voice-bar {
+            width: 4px;
+            background: #ffb4aa;
+            border-radius: 2px;
+            transition: height 0.2s ease;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #131313;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #353534;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30 selection:text-primary">
+<!-- Top Navigation Shell -->
+<header class="fixed top-0 w-full z-50 bg-[#131313]/80 backdrop-blur-xl shadow-[0_0_15px_rgba(255,180,170,0.05)]">
+<nav class="flex justify-between items-center px-8 py-4 w-full max-w-screen-2xl mx-auto">
+<div class="text-2xl font-bold tracking-tighter text-[#ffb4aa] font-headline uppercase">
+                SPEECH-MECH
+            </div>
+<div class="hidden md:flex gap-12 font-headline tracking-wider uppercase text-sm">
+<a class="text-[#e7bdb7] hover:text-[#e5e2e1] hover:bg-white/5 transition-all duration-300" href="#">Neural</a>
+<a class="text-[#e7bdb7] hover:text-[#e5e2e1] hover:bg-white/5 transition-all duration-300" href="#">Logs</a>
+<a class="text-[#e7bdb7] hover:text-[#e5e2e1] hover:bg-white/5 transition-all duration-300" href="#">Nodes</a>
+</div>
+<div class="flex items-center gap-6">
+<button class="material-symbols-outlined text-[#ffb4aa] hover:bg-white/5 p-2 rounded transition-all">settings</button>
+<button class="material-symbols-outlined text-[#ffb4aa] hover:bg-white/5 p-2 rounded transition-all">account_circle</button>
+</div>
+</nav>
+</header>
+<main class="min-h-screen pt-24 pb-32 px-6 flex flex-col items-center max-w-7xl mx-auto">
+<!-- Result Preview Area (The Obsidian Monolith) -->
+<section class="w-full mb-12 flex flex-col items-center">
+<div class="w-full aspect-[21/9] bg-surface-container rounded-lg overflow-hidden crimson-glow relative group">
+<img alt="Synthesis Preview" class="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-1000" data-alt="Monolithic abstract structure in deep obsidian black with crimson glowing neural pathways under ethereal dramatic dark studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmGkog76GeTIrwyvFC5v5lp0RCxbLThI0Cv1L89nyzG3pwfgsL13KSlRyXxpi-PpiOVKr-enJhcngws1rsBewajzhqMEbShunuBimYZ_rpTv_nZ5oOx2vPnw9X340Kfktnuep89DwLi5KIiEWJ_nMjTPCmnSqFPk_Yjy5ryyo8cw63QovVgdwioMcob7eHuI6T5GkyyndIdVPVvgc0vXdcibj6tpkYmuYOcRlDBVuPJWunLeHfoNAjvQVHhunLAqeldq_ir2eNzK8"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent opacity-60"></div>
+<!-- Status Overlay -->
+<div class="absolute top-8 left-8 flex flex-col gap-2">
+<span class="font-label text-primary text-xs tracking-widest uppercase">Entity Synthesis Active</span>
+<h2 class="font-headline text-4xl font-light tracking-tighter text-on-surface">OBSIDIAN_CORE_01</h2>
+</div>
+<div class="absolute bottom-8 right-8 flex gap-4">
+<button class="bg-surface-container-low/40 backdrop-blur-md px-4 py-2 text-xs font-label uppercase tracking-widest border border-outline-variant/20 hover:bg-primary/20 transition-colors">Export Map</button>
+<button class="bg-primary/10 backdrop-blur-md px-4 py-2 text-xs font-label uppercase tracking-widest border border-primary/30 text-primary hover:bg-primary/20 transition-colors">Manifest</button>
+</div>
+</div>
+</section>
+<!-- Voice Visualizer & Main Prompt -->
+<section class="w-full max-w-4xl flex flex-col items-center gap-8 mb-16">
+<!-- Listening Engine -->
+<div class="flex items-end justify-center gap-1.5 h-16 w-full">
+<div class="voice-bar h-4" style="animation: pulse 1.2s infinite ease-in-out 0.1s"></div>
+<div class="voice-bar h-8" style="animation: pulse 1.2s infinite ease-in-out 0.2s"></div>
+<div class="voice-bar h-12" style="animation: pulse 1.2s infinite ease-in-out 0.3s"></div>
+<div class="voice-bar h-6" style="animation: pulse 1.2s infinite ease-in-out 0.4s"></div>
+<div class="voice-bar h-14" style="animation: pulse 1.2s infinite ease-in-out 0.5s"></div>
+<div class="voice-bar h-4" style="animation: pulse 1.2s infinite ease-in-out 0.6s"></div>
+<div class="voice-bar h-10" style="animation: pulse 1.2s infinite ease-in-out 0.7s"></div>
+<div class="voice-bar h-12" style="animation: pulse 1.2s infinite ease-in-out 0.8s"></div>
+<div class="voice-bar h-5" style="animation: pulse 1.2s infinite ease-in-out 0.9s"></div>
+<style>
+                    @keyframes pulse {
+                        0%, 100% { height: 10px; opacity: 0.5; }
+                        50% { height: 40px; opacity: 1; }
+                    }
+                </style>
+</div>
+<!-- Voice Input Container -->
+<div class="w-full relative">
+<div class="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary-container/20 blur opacity-25"></div>
+<div class="relative bg-surface-container-low p-1 rounded shadow-2xl flex items-center gap-4">
+<div class="p-4 bg-primary rounded-sm shadow-[0_0_15px_rgba(255,180,170,0.4)]">
+<span class="material-symbols-outlined text-on-primary text-3xl" style="font-variation-settings: 'FILL' 1;">mic</span>
+</div>
+<div class="flex-1 flex flex-col px-2">
+<span class="text-[10px] font-label text-primary uppercase tracking-widest mb-1">Synthesizer Prompt</span>
+<input class="bg-transparent border-none focus:ring-0 text-xl font-body text-on-surface placeholder:text-on-surface-variant/40 w-full p-0" type="text" value="Generate a hyper-realistic neural architecture fused with obsidian lattice structures..."/>
+</div>
+<button class="mr-4 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-3xl">send</span>
+</button>
+</div>
+</div>
+<p class="text-on-surface-variant/60 font-label text-[10px] uppercase tracking-[0.2em]">Awaiting verbal manifest commands | Status: Listening...</p>
+</section>
+<!-- Manifestation Gallery -->
+<section class="w-full">
+<div class="flex justify-between items-end mb-8">
+<div>
+<h3 class="font-headline text-2xl tracking-tighter text-on-surface">PREVIOUS MANIFESTATIONS</h3>
+<p class="text-on-surface-variant text-xs font-label uppercase tracking-widest">Neural History Log</p>
+</div>
+<button class="text-primary font-label text-xs uppercase tracking-widest hover:underline">View All Clusters</button>
+</div>
+<!-- Asymmetric Bento-style Gallery -->
+<div class="grid grid-cols-12 gap-6 h-[400px]">
+<div class="col-span-12 md:col-span-4 bg-surface-container rounded group overflow-hidden relative">
+<img alt="History 01" class="w-full h-full object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" data-alt="Global neural network visualization with glowing fiber optic lines over dark blue sphere futuristic aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTnhTmFyppwldXH2NX9itbORQeyY8eQOWW9vUUG_Rb7PUhEldhmIEV5tIsP3fVY9lz37u-Wj6XhwgNFlXzESODvXpJB_J-ITBbXftHcUOQTJ68Bs89_8Wh4i48RpNLtKWiiOVsPcOnno8SdUNuWFZUJ9OZl7JpzUdG9YlKkhiOp0kyRFv8IgdrwLnaDa7LmdV0OXMmd_HxHsOb_xu5Z4dtEuFmHPoJkDBM6-f7kpNaKu7h_vp6jg7WXHWi5Wf2q5W_rCL-cpZQtkE"/>
+<div class="absolute bottom-4 left-4">
+<p class="font-label text-[10px] text-primary">02:14:44</p>
+<p class="font-headline text-sm tracking-tight">GLOBAL_NODE_PHI</p>
+</div>
+</div>
+<div class="col-span-6 md:col-span-2 bg-surface-container rounded group overflow-hidden relative">
+<img alt="History 02" class="w-full h-full object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" data-alt="Abstract vibrant geometric wave pattern with pink and orange light trails in deep black space" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfk8WNYPcaUw002IGZArtAKTXTV7AEcgU1znrWvNjSBXJtx1MWQxu3aqQa3EwPAxByQnWYP9g4fRHBp03Cg9AIK81WVMZvz2GP4k-ljbho3B8Z2vZ1nswDp5xwc7K0zLy5PnVtf_-LM52ipagtYRYhcyBDlGnAH487hEcd2Uwl-hX2ZBlT9OwBcfH21lnnYFe_zMSL7G4hxWjlPhMTFdYZSpDir596JOcxfRKWeHoQvCf-MmNHjBSYsxSg3KdBYX6P_KJHxeBl7zI"/>
+</div>
+<div class="col-span-6 md:col-span-2 bg-surface-container rounded group overflow-hidden relative">
+<img alt="History 03" class="w-full h-full object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" data-alt="Minimalist 3D render of floating glass spheres with subtle reflections on dark surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCV3kUkNqjaPZXH4pdbiiywT78oncQd-LWRayCNXWEsUNKS3WkYTdTdbdCmW8JIXQ10_ZSeTW3qoFYhV9Rk0R6Y6Pu-Hry6AMbLluWMCNuyELqymcF1HM97zzEHz64Wv3uWQcPRgf43DTTo-u6i7CR1dAwaMPLYgP_aUQ1z7QwATMMkDeN4OD_ptJ-LT57J_PXTIWUNWi_mN49n4Q3xaKID_yaWWDWRJGRJiQ7vbwrx9TKIZkG0puOUBK3ZD-ZG3Ai4PCO-HT9LOkk"/>
+</div>
+<div class="col-span-12 md:col-span-4 bg-surface-container rounded group overflow-hidden relative">
+<div class="p-8 h-full flex flex-col justify-between border-l-2 border-primary">
+<span class="material-symbols-outlined text-primary text-4xl">database</span>
+<div>
+<p class="font-headline text-xl text-on-surface mb-2">MANIFEST_X_99</p>
+<p class="text-on-surface-variant text-xs leading-relaxed">Neural fragment captured during high-bandwidth sequence. Integrity verified at 99.8%.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Shell -->
+<footer class="fixed bottom-0 w-full z-50 bg-[#131313]/90 backdrop-blur-2xl shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+<div class="fixed bottom-0 w-full flex justify-around items-center h-20 px-6 pb-2">
+<a class="flex flex-col items-center justify-center text-[#ffb4aa] drop-shadow-[0_0_8px_rgba(255,180,170,0.6)] Active: scale-110 transition-transform duration-500 ease-out" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">mic</span>
+<span class="font-['Manrope'] text-[10px] font-bold uppercase tracking-widest mt-1">Command</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e7bdb7]/50 hover:text-[#ffb4aa] transition-colors" href="#">
+<span class="material-symbols-outlined">database</span>
+<span class="font-['Manrope'] text-[10px] font-bold uppercase tracking-widest mt-1">History</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e7bdb7]/50 hover:text-[#ffb4aa] transition-colors" href="#">
+<span class="material-symbols-outlined">identity_platform</span>
+<span class="font-['Manrope'] text-[10px] font-bold uppercase tracking-widest mt-1">Identity</span>
+</a>
+</div>
+</footer>
+<!-- FAB (Suppressed due to screen type focus as per guidelines) -->
+</body></html>

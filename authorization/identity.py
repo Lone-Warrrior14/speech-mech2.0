@@ -418,4 +418,4 @@ def verify_face_from_frame(username, frame):
     if len(encodings) > 0:
         match = face_recognition.compare_faces([stored_encoding], encodings[0])
         return match[0]
-    return False
+    return False

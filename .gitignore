@@ -17,6 +17,8 @@ vosk-model-*/
 
 # Project specific
 unwanted/
+temp/
+docs/temp_*
 *.log
 rag_server_boot.log
 server_log.txt

@@ -172,6 +172,10 @@
                         else if (target === 'settings') window.location.href = '/settings';
                         else if (target === 'logout') window.location.href = '/logout';
                         else if (target === 'dashboard') window.location.href = '/dashboard';
+                    } else if (data.response.startsWith("GEN_IMAGE:")) {
+                        const prompt = data.response.replace("GEN_IMAGE:", "");
+                        resText.innerText = "Generating Visual: " + prompt;
+                        window.location.href = `/image_gen?auto_prompt=${encodeURIComponent(prompt)}`;
                     } else if (data.response.startsWith("FOLDER_SELECT:")) {
                         const targetFolder = data.response.replace("FOLDER_SELECT:", "");
                         resText.innerText = "Synchronizing Folder: " + targetFolder;

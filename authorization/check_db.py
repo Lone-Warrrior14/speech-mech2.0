@@ -1,6 +1,9 @@
-from identity import get_all_usernames
-try:
-    users = get_all_usernames()
-    print(f"Users in DB: {users}")
-except Exception as e:
-    print(f"Error: {e}")
+from identity import get_connection
+
+conn = get_connection()
+cursor = conn.cursor(dictionary=True)
+cursor.execute("SELECT * FROM users")
+for row in cursor.fetchall():
+    print(row)
+cursor.close()
+conn.close()
