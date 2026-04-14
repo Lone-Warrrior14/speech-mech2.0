@@ -90,6 +90,16 @@
             text-transform: uppercase;
             letter-spacing: 1px;
         }
+
+        .active-mic {
+            animation: pulse-mic 1.5s infinite;
+        }
+
+        @keyframes pulse-mic {
+            0% { box-shadow: 0 0 0 0 rgba(79, 172, 254, 0.4); transform: scale(1); }
+            70% { box-shadow: 0 0 0 15px rgba(79, 172, 254, 0); transform: scale(1.05); }
+            100% { box-shadow: 0 0 0 0 rgba(79, 172, 254, 0); transform: scale(1); }
+        }
     </style>
 </head>
 <body>
@@ -136,15 +146,12 @@
 
         function speak(text) {
             if (!text) return;
-            // Stop listening immediately
-            if (micPowered && recognition) {
-                try { recognition.stop(); } catch(e) {}
-            }
-            // Strip markdown for speaking
+            window.speechSynthesis.cancel();
+            if (micPowered && recognition) try { recognition.stop(); } catch(e) {}
             const cleanText = text.replace(/[*_`#]/g, '');
             const msg = new SpeechSynthesisUtterance(cleanText);
             msg.onstart = () => { isSpeaking = true; };
-            msg.onend = () => { isSpeaking = false; if (micPowered) setTimeout(startMic, 300); };
+            msg.onend = () => { isSpeaking = false; if (micPowered) setTimeout(() => { if (micPowered && !isSpeaking) try { recognition.start(); } catch(e) {} }, 400); };
             window.speechSynthesis.speak(msg);
         }
 
@@ -152,17 +159,14 @@
             const input = document.getElementById('user-input');
             const text = textOverride || input.value.trim();
             if (!text) return;
-
             appendMessage('user', text);
             input.value = '';
-
             const response = await fetch('/api/ask_coder', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt: text })
             });
             const data = await response.json();
-            
             appendAICoderMessage(data);
             speak(data.answer);
         }
@@ -180,17 +184,12 @@
             const chat = document.getElementById('chat-messages');
             const div = document.createElement('div');
             div.className = 'message ai';
-            
             let html = `<div class="ai-status">Neural Synthesis Result</div>`;
             html += `<div style="white-space: pre-wrap;">${data.answer}</div>`;
-            
             if (data.files && data.files.length > 0) {
                 html += `<div class="file-list">`;
-                data.files.forEach(file => {
-                    html += `<div class="file-badge"><i class="fas fa-file-code"></i> ${file[0]}</div>`;
-                });
+                data.files.forEach(file => { html += `<div class="file-badge"><i class="fas fa-file-code"></i> ${file[0]}</div>`; });
                 html += `</div>`;
-                
                 data.files.forEach(file => {
                     html += `<div class="code-block">
                         <div style="color: var(--secondary); font-size: 0.7rem; margin-bottom: 0.5rem;">${file[0]}</div>
@@ -199,40 +198,25 @@
                     </div>`;
                 });
             }
-            
             div.innerHTML = html;
             chat.appendChild(div);
             chat.scrollTop = chat.scrollHeight;
         }
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function copyToClipboard(btn, text) {
-            navigator.clipboard.writeText(text);
-            const originalText = btn.innerText;
-            btn.innerText = 'Copied!';
-            setTimeout(() => btn.innerText = originalText, 2000);
-        }
+        function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+        function copyToClipboard(btn, text) { navigator.clipboard.writeText(text); const originalText = btn.innerText; btn.innerText = 'Copied!'; setTimeout(() => btn.innerText = originalText, 2000); }
 
         function toggleVoice() {
             const btn = document.getElementById('voiceBtn');
             micPowered = !micPowered;
             if (micPowered) {
-                btn.classList.add('active');
+                btn.style.background = "linear-gradient(135deg, #00f2fe, #4facfe)";
+                btn.classList.add('active-mic');
                 startContinuousListening();
             } else {
-                btn.classList.remove('active');
+                btn.style.background = "linear-gradient(135deg, #f093fb, #f5576c)";
+                btn.classList.remove('active-mic');
                 if (recognition) try { recognition.stop(); } catch(e) {}
-            }
-        }
-
-        function startMic() {
-            if (micPowered && !isSpeaking) {
-                try { recognition.start(); } catch(e) {}
             }
         }
 
@@ -242,24 +226,41 @@
             recognition = new SpeechRecognition();
             recognition.lang = 'en-US';
             recognition.continuous = false;
-
             recognition.onresult = async (event) => {
                 if (isSpeaking) return;
-                const command = event.results[0][0].transcript;
-                if (command.toLowerCase().includes("go back") || command.toLowerCase().includes("dashboard")) {
+                const command = event.results[event.results.length - 1][0].transcript;
+                const low = command.toLowerCase();
+                if (low.includes("go back") || low.includes("dashboard")) {
                     window.location.href = '/dashboard';
+                } else if (low.includes("logout") || low.includes("sign out")) {
+                    location.href = '/logout';
                 } else {
                     document.getElementById('user-input').value = command;
                     sendMessage(command);
                 }
             };
-            recognition.onend = () => { if (micPowered && !isSpeaking) setTimeout(startMic, 300); };
-            if (!isSpeaking) {
-                try { recognition.start(); } catch(e) {}
-            }
+            recognition.onend = () => { if (micPowered && !isSpeaking) setTimeout(() => { if (micPowered && !isSpeaking) try { recognition.start(); } catch(e) {} }, 300); };
+            if (!isSpeaking) try { recognition.start(); } catch(e) {}
         }
 
-        window.onload = () => { setTimeout(() => { if(!micPowered) toggleVoice(); }, 1500); };
+        window.onload = () => {
+            micPowered = true;
+            const btn = document.getElementById('voiceBtn');
+            btn.style.background = "linear-gradient(135deg, #00f2fe, #4facfe)";
+            btn.classList.add('active-mic');
+            startContinuousListening();
+            setTimeout(() => { if (!isSpeaking) speak("Omni Coder synchronized."); }, 1000);
+        };
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault(); 
+                window.speechSynthesis.cancel();
+                isSpeaking = false;
+                if (!micPowered) toggleVoice();
+                else if (recognition) try { recognition.stop(); } catch(err) {}
+            }
+        });
     </script>
 </body>
 </html>

@@ -170,12 +170,15 @@
             z-index: 1000;
         }
 
-        .voice-trigger.active {
-            filter: hue-rotate(90deg);
-            animation: pulse 1.5s infinite;
+        .active-mic {
+            animation: pulse-mic 1.5s infinite;
         }
 
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        @keyframes pulse-mic {
+            0% { box-shadow: 0 0 0 0 rgba(79, 172, 254, 0.4); transform: scale(1); }
+            70% { box-shadow: 0 0 0 15px rgba(79, 172, 254, 0); transform: scale(1.05); }
+            100% { box-shadow: 0 0 0 0 rgba(79, 172, 254, 0); transform: scale(1); }
+        }
         
         .mic-svg { width: 28px; height: 28px; fill: white; }
 
@@ -349,7 +352,6 @@
             if (!text) return;
             window.speechSynthesis.cancel();
             
-            // Stop listening immediately
             if (micPowered && recognition) {
                 try { recognition.stop(); } catch(e) {}
             }
@@ -363,7 +365,7 @@
                         if (micPowered && !isSpeaking) {
                             try { recognition.start(); } catch(e) {}
                         }
-                    }, 300);
+                    }, 400);
                 }
             };
             window.speechSynthesis.speak(msg);
@@ -373,30 +375,54 @@
             const btn = document.getElementById('voiceBtn');
             micPowered = !micPowered;
             if (micPowered) {
-                btn.classList.add('active');
+                btn.style.background = "linear-gradient(135deg, #00f2fe, #4facfe)";
+                btn.classList.add('active-mic');
                 startContinuousListening();
             } else {
-                btn.classList.remove('active');
-                if (recognition) recognition.stop();
+                btn.style.background = "linear-gradient(135deg, #f093fb, #f5576c)";
+                btn.classList.remove('active-mic');
+                if (recognition) try { recognition.stop(); } catch(e) {}
             }
         }
 
         function startContinuousListening() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) return;
+            
+            if (recognition) try { recognition.stop(); } catch(e) {}
+            
             recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
             recognition.onresult = (event) => {
                 if (isSpeaking) return;
-                handleVoiceCommand(event.results[0][0].transcript);
+                const command = event.results[event.results.length - 1][0].transcript;
+                handleVoiceCommand(command);
             };
-            recognition.onend = () => { if (micPowered && !isSpeaking) setTimeout(() => { try { recognition.start(); } catch(e) {} }, 300); };
+
+            recognition.onend = () => {
+                if (micPowered && !isSpeaking) {
+                    setTimeout(() => {
+                        if (micPowered && !isSpeaking) {
+                            try { recognition.start(); } catch(e) {}
+                        }
+                    }, 300);
+                }
+            };
+
             if (!isSpeaking) {
                 try { recognition.start(); } catch(e) {}
             }
         }
 
         function handleVoiceCommand(command) {
-            const low = command.toLowerCase();
+            const low = command.toLowerCase().trim();
+            if (low === "upload") {
+                location.href = '/rag?auto_upload=true';
+                return;
+            }
             if (low.includes("go back") || low.includes("dashboard")) {
                 location.href = '/dashboard';
             } else if (low.includes("logout") || low.includes("sign out")) {
@@ -416,9 +442,17 @@
         }
 
         window.onload = () => {
-            // Initiate voice synchronization immediately
-            setTimeout(toggleMicPower, 1000);
+            // Default ON
+            micPowered = true;
+            const btn = document.getElementById('voiceBtn');
+            btn.style.background = "linear-gradient(135deg, #00f2fe, #4facfe)";
+            btn.classList.add('active-mic');
+            startContinuousListening();
             
+            setTimeout(() => {
+                if (!isSpeaking) speak("Neural Visualizer synchronized.");
+            }, 1000);
+
             // Auto prompt if present
             const params = new URLSearchParams(window.location.search);
             if (params.has('auto_prompt')) {
@@ -426,7 +460,6 @@
             }
         };
 
-        // 🛰️ Neural Override: Space key to stop speaking and start mic
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
                 e.preventDefault(); 

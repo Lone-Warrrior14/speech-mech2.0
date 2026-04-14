@@ -7,6 +7,17 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .active-mic {
+            animation: pulse-mic 1.5s infinite;
+        }
+
+        @keyframes pulse-mic {
+            0% { box-shadow: 0 0 0 0 rgba(79, 172, 254, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(79, 172, 254, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(79, 172, 254, 0); }
+        }
+    </style>
 </head>
 <body>
     <div class="premium-container" style="background-image: linear-gradient(rgba(10, 11, 30, 0.9), rgba(10, 11, 30, 0.9)), url('/static/img/dash_bg.png'); justify-content: flex-start; padding-top: 5rem;">
@@ -92,7 +103,6 @@
             if (!text) return;
             window.speechSynthesis.cancel();
             
-            // Stop listening immediately
             if (micPowered && recognition) {
                 try { recognition.stop(); } catch(e) {}
             }
@@ -106,7 +116,7 @@
                         if (micPowered && !isSpeaking) {
                             try { recognition.start(); } catch(e) {}
                         }
-                    }, 300);
+                    }, 400);
                 }
             };
             window.speechSynthesis.speak(msg);
@@ -120,12 +130,14 @@
             micPowered = !micPowered;
             
             if (micPowered) {
-                btn.classList.add('active');
+                btn.style.background = "linear-gradient(135deg, #00f2fe, #4facfe)";
+                btn.classList.add('active-mic');
                 if (mainBtn) mainBtn.innerText = "Power Off";
                 if (statusText) statusText.innerText = "Mic Active. Continuously monitoring neural uplink...";
                 startContinuousListening();
             } else {
-                btn.classList.remove('active');
+                btn.style.background = "linear-gradient(135deg, #f093fb, #f5576c)";
+                btn.classList.remove('active-mic');
                 if (mainBtn) mainBtn.innerText = "Power On";
                 if (statusText) statusText.innerText = "Mic Off. Click to engage permanent listening mode.";
                 if (recognition) {
@@ -142,13 +154,9 @@
             recognition.lang = 'en-US';
             recognition.continuous = false;
 
-            recognition.onstart = () => {
-                document.getElementById('voiceBtn').classList.add('active');
-            };
-
             recognition.onresult = async (event) => {
-                if (isSpeaking) return; // Ignore if browser is talking
-                const command = event.results[0][0].transcript;
+                if (isSpeaking) return;
+                const command = event.results[event.results.length - 1][0].transcript;
                 const resBox = document.getElementById('system-response');
                 const resText = document.getElementById('response-text');
                 
@@ -185,7 +193,7 @@
                         window.location.href = '/rag?auto_upload=true';
                     } else {
                         resText.innerText = data.response;
-                        speak(data.response); // Speak the answer
+                        speak(data.response);
                     }
                 } catch (err) {
                     resText.innerText = "Uplink Failure.";
@@ -193,7 +201,6 @@
             };
 
             recognition.onend = () => {
-                document.getElementById('voiceBtn').classList.remove('active');
                 if (micPowered && !isSpeaking) {
                     setTimeout(() => {
                         if (micPowered && !isSpeaking) {
@@ -203,42 +210,35 @@
                 }
             };
 
-            recognition.onerror = (event) => {
-                const status = document.getElementById('mic-status');
-                if (event.error === 'not-allowed') {
-                    status.innerText = "Mic Permission Denied.";
-                } else if (event.error === 'no-speech') {
-                    // Do nothing, just restart later
-                } else if (event.error === 'network') {
-                    status.innerText = "Neural Signal Weak (Network Error).";
-                } else {
-                    console.error("Mic Error:", event.error);
-                }
-            };
-
             if (!isSpeaking) {
                 try { recognition.start(); } catch(e) {}
             }
         }
 
         window.onload = () => {
-             // Delay slightly to allow full system synchronization
-             setTimeout(toggleMicPower, 1000);
+             // Default ON
+             micPowered = true;
+             const btn = document.getElementById('voiceBtn');
+             btn.style.background = "linear-gradient(135deg, #00f2fe, #4facfe)";
+             btn.classList.add('active-mic');
+             const mainBtn = document.getElementById('mic-btn-main');
+             const statusText = document.getElementById('mic-status');
+             if (mainBtn) mainBtn.innerText = "Power Off";
+             if (statusText) statusText.innerText = "Mic Active. Continuously monitoring neural uplink...";
+             startContinuousListening();
+
+             setTimeout(() => {
+                 if (!isSpeaking) speak("Neural Dashboard synchronized.");
+             }, 1000);
         };
 
-        // 🛰️ Neural Override: Space key to stop speaking and start mic
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-                e.preventDefault(); // Prevent page scroll
+                e.preventDefault(); 
                 window.speechSynthesis.cancel();
                 isSpeaking = false;
-                
-                if (!micPowered) {
-                    toggleMicPower();
-                } else if (recognition) {
-                    try { recognition.stop(); } catch(err) {}
-                    // The onend handler will automatically restart it if micPowered is true
-                }
+                if (!micPowered) toggleMicPower();
+                else if (recognition) try { recognition.stop(); } catch(err) {}
             }
         });
     </script>
