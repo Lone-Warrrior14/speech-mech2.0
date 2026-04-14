@@ -1,6 +1,0 @@
-USER: who is the founder
-AI: There is no context provided to determine who the founder is. Please provide more information so I can give you an accurate answer.
----
-USER: who is the founder
-AI: The founder is Tim Berners-Lee.
----

@@ -22,7 +22,29 @@ docs/temp_*
 *.log
 rag_server_boot.log
 server_log.txt
+archive/
+database/
+generated_projects/
+scratch/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Media and Data
+*.mp4
+*.mp3
+*.pdf
+*.docx
+*.pptx
+*.png
+*.jpg
+*.jpeg
+*.wav
+temp_rag/
+rag_system/RAG/users/
+speech_assistant/media/media/movies/
+*.txt
+!requirements.txt
+!req.txt
+!README.md
