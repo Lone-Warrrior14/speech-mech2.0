@@ -93,6 +93,7 @@
         let micPowered = false;
         let recognition = null;
         let isSpeaking = false;
+        let isScanning = false;
         let faceRetries = 0;
         let selectedUsername = "";
 
@@ -104,11 +105,14 @@
 
         function speak(text) {
             if (!text) return;
+            
+            // Stop listening immediately
+            if (micPowered && recognition) {
+                try { recognition.stop(); } catch(e) {}
+            }
+
             const msg = new SpeechSynthesisUtterance(text);
-            msg.onstart = () => {
-                isSpeaking = true;
-                if (recognition) try { recognition.stop(); } catch(e) {}
-            };
+            msg.onstart = () => { isSpeaking = true; };
             msg.onend = () => {
                 isSpeaking = false;
                 if (micPowered) {
@@ -228,6 +232,11 @@
         }
 
         async function startFaceAuthSequence() {
+            isScanning = true;
+            // Stop listening during biometric scan
+            if (micPowered && recognition) {
+                try { recognition.stop(); } catch(e) {}
+            }
             document.getElementById('initial-actions').style.display = 'none';
             document.getElementById('auth-options').style.display = 'none';
             document.getElementById('camera-area').style.display = 'block';
@@ -238,6 +247,7 @@
 
         async function processFaceStep() {
             if (faceRetries >= 5) {
+                isScanning = false;
                 setStatus("Max retries reached. Password fallback engaged.", "#ff4b2b");
                 speak("Face recognition failed 5 times. Reverting to password fallback.");
                 stopWebCamera();
@@ -299,6 +309,7 @@
         }
 
         function resetAuth() {
+            isScanning = false;
             stopWebCamera();
             fetch('/stop_camera', { method: 'POST' });
             selectedUsername = "";
@@ -352,16 +363,35 @@
             };
             recognition.onend = () => {
                 document.getElementById('voiceBtn').classList.remove('active');
-                if (micPowered && !isSpeaking) {
+                if (micPowered && !isSpeaking && !isScanning) {
                     try { recognition.start(); } catch(e) {}
                 }
             };
-            recognition.start();
+            
+            if (!isSpeaking && !isScanning) {
+                try { recognition.start(); } catch(e) {}
+            }
         }
 
         window.onload = () => {
             speak("Welcome to Speech Mech. Please identify yourself.");
+            setTimeout(toggleMicPower, 1500); 
         };
+
+        // 🛰️ Neural Override: Space key to stop speaking and start mic
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault(); 
+                window.speechSynthesis.cancel();
+                isSpeaking = false;
+                
+                if (!micPowered) {
+                    toggleMicPower();
+                } else if (recognition) {
+                    try { recognition.stop(); } catch(err) {}
+                }
+            }
+        });
     </script>
 </body>
 </html>

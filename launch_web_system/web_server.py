@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, Response
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, Response, send_file, send_from_directory
 import os
 import sys
 import json
@@ -11,12 +11,30 @@ import threading
 base_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir = os.path.dirname(base_dir)
 # Inject related task modules into path
-sys.path.append(os.path.join(root_dir, 'authorization'))
-sys.path.append(os.path.join(root_dir, 'speech_assistant'))
-sys.path.append(os.path.join(root_dir, 'rag_system'))
+sys.path.extend([
+    os.path.join(root_dir, 'authorization'),
+    os.path.join(root_dir, 'speech_assistant'),
+    os.path.join(root_dir, 'rag_system'),
+    os.path.join(root_dir, 'rag_system', 'RAG'),
+    os.path.join(root_dir, 'speech_assistant', 'media'),
+    os.path.join(root_dir, 'image_gen')
+])
+
+from azure.storage.blob import BlobServiceClient
 # ------------------------------------
 
 # Import project modules from task folders
+# --- CORE UTILITIES ---
+try:
+    import requests
+    import io
+    import base64
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(root_dir, ".env"))
+except ImportError as e:
+    print(f"[CRITICAL] Core requirements missing (requests/dotenv): {e}")
+
+# --- NEURAL MODULES ---
 try:
     from identity import (
         fuzzy_match_user, verify_password, switch_active_user, get_password_hash,
@@ -28,22 +46,56 @@ try:
     from assistant import ask_ai, get_full_response
     from intent_detector import detect_intent
     from command_router import route_intent
+    import coder 
 except ImportError as e:
-    print(f"[CRITICAL] Failed to link neural modules across task folders: {e}")
-    # Fallbacks or dummy functions would go here if needed
+    print(f"[WARN] Identification or Voice modules failed to link: {e}")
 
-# RAG Neural Link Initialization (Redirected to rag_system)
-RAG_BASE_PATH = os.path.join(root_dir, 'rag_system', 'RAG')
-# RAG Intelligence is now handled on Port 5060.
-print(f"[BOOT] RAG Proxy Channel initialized. Target: http://127.0.0.1:5060")
-
-# Media/Entertainment Imports (Redirected to speech_assistant/media)
-media_path = os.path.join(root_dir, 'speech_assistant', 'media')
-sys.path.append(media_path)
+# --- MEDIA SYSTEM ---
 try:
-    from backend import entertainment_mode
-except ImportError:
-    entertainment_mode = None
+    from media_library import get_movies
+except ImportError as e:
+    print(f"[WARN] Media Library failed to link: {e}")
+    def get_movies():
+        print("[ERROR] get_movies is using empty fallback due to import failure.")
+        return []
+
+# --- RAG INTELLIGENCE ---
+rag_answer = None
+universal_reader = None
+insert_pinecone = None
+
+try: import rag_answer
+except Exception as e: print(f"[WARN] RAG: rag_answer failed: {e}")
+
+try: import universal_reader
+except Exception as e: print(f"[WARN] RAG: universal_reader failed: {e}")
+
+try: import insert_pinecone
+except Exception as e: print(f"[WARN] RAG: insert_pinecone failed: {e}")
+
+if not all([rag_answer, universal_reader, insert_pinecone]):
+    print("[WARN] RAG Intelligence modules are incomplete. Neural links may be unstable.")
+
+
+# Consolidated Configuration
+RAG_PATH = os.path.join(root_dir, 'rag_system', 'RAG')
+MEDIA_FOLDER = os.path.join(root_dir, "speech_assistant", "media", "media", "movies")
+os.makedirs(MEDIA_FOLDER, exist_ok=True)
+
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
+INVOKE_URL = "https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.2-klein-4b"
+CLOUDFLARE_URL = "https://image.nehanabdullah540.workers.dev"
+
+AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING")
+CONTAINER_NAME = os.getenv("CONTAINER_NAME")
+
+if AZURE_CONNECTION_STRING:
+    blob_service_client = BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING)
+    container_client = blob_service_client.get_container_client(CONTAINER_NAME)
+else:
+    print("[WARN] Azure Connection String missing in Neural Environment.")
+
+print(f"[BOOT] Neural Core Unified. Port 8000 is now the primary nexus.")
 
 import cv2
 import base64
@@ -196,43 +248,109 @@ def rag():
     if 'user' not in session: return redirect(url_for('index'))
     return render_template('rag.html', user=session['user'])
 
+@app.route('/entertainment')
+def entertainment_route():
+    if 'user' not in session: return redirect(url_for('index'))
+    movies = get_movies()
+    role = session.get('user_role', 'user')
+    return render_template('media_box.html', user=session['user'], movies=movies, role=role)
+
+@app.route('/image_gen')
+def image_gen_route():
+    if 'user' not in session: return redirect(url_for('index'))
+    return render_template('image_gen.html', user=session['user'])
+
+@app.route('/play/<filename>')
+def play_media(filename):
+    return send_from_directory(MEDIA_FOLDER, filename)
+
+@app.route('/api/upload_media', methods=['POST'])
+def upload_media_api():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file"}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    try:
+        blob_name = f"movies/{file.filename}"
+        blob_client = container_client.get_blob_client(blob_name)
+        blob_client.upload_blob(file, overwrite=True)
+        return jsonify({"success": True})
+    except Exception as e:
+        print(f"[ERROR] Azure Upload Failed: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/generate-image', methods=['POST'])
+def generate_image_api():
+    data = request.json
+    prompt = data.get('prompt', "A beautiful landscape")
+    headers = {"Authorization": f"Bearer {NVIDIA_API_KEY}", "Accept": "application/json"}
+    payload = {"prompt": prompt, "width": 1024, "height": 1024, "seed": 0, "steps": 4}
+    try:
+        res = requests.post(INVOKE_URL, headers=headers, json=payload, timeout=30)
+        res.raise_for_status()
+        items = res.json().get("data") or res.json().get("artifacts") or []
+        if items:
+            b64_data = items[0].get("b64_json") or items[0].get("base64")
+            if b64_data:
+                return send_file(io.BytesIO(base64.b64decode(b64_data)), mimetype='image/png')
+    except Exception as e:
+        print(f"[ERROR] NVIDIA Gen-Image failed: {e}")
+    try:
+        print(f"[IMAGE GEN] Falling back to Cloudflare Backup for: {prompt}")
+        enhanced_prompt = prompt + ", ultra realistic, 4k, detailed, cinematic lighting"
+        res = requests.post(CLOUDFLARE_URL, json={"prompt": enhanced_prompt}, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AI-Integrator/1.0"}, timeout=30)
+        if res.status_code == 200:
+            return send_file(io.BytesIO(res.content), mimetype='image/png')
+        else:
+            print(f"[ERROR] Cloudflare Gen-Image failed with status {res.status_code}: {res.text}")
+    except Exception as e:
+        print(f"[ERROR] Cloudflare Gen-Image failed: {e}")
+    return jsonify({"error": "Neural generation failed."}), 500
+
 @app.route('/code_assist')
 def code_assist():
     if 'user' not in session: return redirect(url_for('index'))
-    code_assist_path = os.path.join(root_dir, "unwanted", "code_assists", "app.py")
-    subprocess.Popen([sys.executable, code_assist_path], cwd=os.path.join(root_dir, "unwanted", "code_assists"))
-    time.sleep(2)
-    # Redirect to proxy if using ngrok, or local directly
-    target_host = request.host.split(':')[0]
-    if "ngrok" in request.host:
-        return redirect("/proxy/5010/")
-    return redirect(f"http://{target_host}:5010")
+    return render_template('code_assist.html', user=session['user'])
 
-@app.route('/entertainment')
-def entertainment():
+@app.route('/api/ask_coder', methods=['POST'])
+def api_ask_coder():
+    if 'user' not in session: return jsonify({"answer": "Neural Authorization Required."})
+    try:
+        data = request.json
+        user_prompt = data.get("prompt", "")
+        if not user_prompt:
+            return jsonify({"answer": "Neural signal void."})
+
+        files, explanation, pip, note = coder.generate_code_solution(user_prompt)
+        
+        # Format the response for the UI
+        response_text = f"**Neural Synthesis Complete.**\n\n{explanation}\n\n"
+        if pip:
+            response_text += f"\n**Requirements:** `pip install {pip}`\n"
+        if note:
+            response_text += f"\n**Setup Note:** {note}\n"
+        
+        return jsonify({
+            "answer": response_text,
+            "files": files,
+            "success": True
+        })
+    except Exception as e:
+        return jsonify({"answer": f"Core Fault: {str(e)}", "success": False})
+
+@app.route('/download_coder_project')
+def download_coder_project():
     if 'user' not in session: return redirect(url_for('index'))
-    if entertainment_mode:
-        role = session.get('user_role', 'user')
-        threading.Thread(target=entertainment_mode).start()
-        time.sleep(2)
-        target_host = request.host.split(':')[0]
-        if "ngrok" in request.host:
-             return redirect(f"/proxy/5050/?role={role}")
-        return redirect(f"http://{target_host}:5050?role={role}")
-    return "Entertainment module not available."
+    zip_path = coder.create_project_zip()
+    return send_file(zip_path, as_attachment=True)
 
-@app.route('/image_gen')
-def image_gen():
-    target_host = request.host.split(':')[0]
-    if "ngrok" in request.host:
-        return redirect("/proxy/5000/")
-    return redirect(f"http://{target_host}:5000")
-
+# Standard Service Proxy with Base Tag Injection (Sync with Mech 2)
 @app.route('/proxy/<int:port>/')
 @app.route('/proxy/<int:port>/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def service_proxy(port, path=""):
-    import requests
-    # Forward the request to the local sub-service
     local_url = f"http://127.0.0.1:{port}/{path}"
     if request.query_string:
         local_url += "?" + request.query_string.decode('utf-8')
@@ -250,7 +368,6 @@ def service_proxy(port, path=""):
     if 'text/html' in resp.headers.get('Content-Type', ''):
         try:
             # Inject <base> tag to fix relative resource loading (CSS/JS/Images)
-            # This is critical for ngrok tunnels on a single port.
             base_tag = f'<base href="/proxy/{port}/">'.encode('utf8')
             if b'<head>' in content:
                 content = content.replace(b'<head>', b'<head>' + base_tag)
@@ -338,7 +455,7 @@ def register_face_direct():
                 
                 conn = get_connection()
                 cursor = conn.cursor()
-                cursor.execute("UPDATE users SET face_encoding = %s WHERE username = %s", (serialized, username))
+                cursor.execute("UPDATE users SET face_encoding = ? WHERE username = ?", (serialized, username))
                 conn.commit()
                 cursor.close()
                 conn.close()
@@ -387,7 +504,7 @@ def register_face_direct():
         
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute("UPDATE users SET face_encoding = %s WHERE username = %s", (serialized, username))
+        cursor.execute("UPDATE users SET face_encoding = ? WHERE username = ?", (serialized, username))
         conn.commit()
         cursor.close()
         conn.close()
@@ -400,75 +517,148 @@ def register_face_direct():
 def get_rag_folders_route():
     if 'user' not in session: return jsonify([])
     user_id = session['user_id']
-    path = os.path.join(RAG_BASE_PATH, "users", f"user_{user_id}")
-    os.makedirs(path, exist_ok=True)
-    return jsonify([f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))])
+    prefix = f"rag/user_{user_id}/"
+    
+    try:
+        blobs = container_client.list_blobs(name_starts_with=prefix)
+        folders = set()
+        for blob in blobs:
+            # rag/user_1/my_folder/file.txt -> my_folder
+            parts = blob.name[len(prefix):].split('/')
+            if len(parts) > 0 and parts[0]:
+                folders.add(parts[0])
+        return jsonify(list(folders))
+    except Exception as e:
+        print(f"[ERROR] Azure RAG List Folders Failed: {e}")
+        return jsonify([])
 
 @app.route('/get_rag_files', methods=['POST'])
 def get_rag_files_route():
     if 'user' not in session: return jsonify([])
     user_id = session['user_id']
     folder = request.json.get('folder')
-    path = os.path.join(RAG_BASE_PATH, "users", f"user_{user_id}", folder)
-    if not os.path.exists(path): return jsonify([])
-    # List all files in the folder
-    files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-    return jsonify(files)
+    prefix = f"rag/user_{user_id}/{folder}/"
+    
+    try:
+        blobs = container_client.list_blobs(name_starts_with=prefix)
+        files = []
+        for blob in blobs:
+            filename = os.path.basename(blob.name)
+            if filename:
+                files.append(filename)
+        return jsonify(files)
+    except Exception as e:
+        print(f"[ERROR] Azure RAG List Files Failed: {e}")
+        return jsonify([])
 
 @app.route('/api/create_folder', methods=['POST'])
 def create_folder():
     if 'user' not in session: return jsonify({"success": False})
     user_id = session['user_id']
     name = request.json.get('name')
-    path = os.path.join(RAG_BASE_PATH, "users", f"user_{user_id}", name)
-    os.makedirs(path, exist_ok=True)
-    return jsonify({"success": True})
+    # Create a dummy blob to simulate folder creation in Azure
+    blob_name = f"rag/user_{user_id}/{name}/.keep"
+    try:
+        blob_client = container_client.get_blob_client(blob_name)
+        blob_client.upload_blob(b"", overwrite=True)
+        return jsonify({"success": True})
+    except Exception as e:
+        print(f"[ERROR] Azure RAG Create Folder Failed: {e}")
+        return jsonify({"success": False, "error": str(e)})
 
 @app.route('/api/upload_docs', methods=['POST'])
 def upload_docs():
     if 'user' not in session: return jsonify({"success": False})
     user_id = session['user_id']
-    data = request.json
-    folder = data.get('folder')
-    is_media = data.get('media', False)
     
-    import requests
-    try:
-        res = requests.post("http://127.0.0.1:5060/upload", json={
-            "user_id": user_id,
-            "folder": folder,
-            "media": is_media
-        })
-        return jsonify(res.json())
-    except:
-        return jsonify({"success": False, "message": "RAG Intelligence is unreachable."})
+    # Get metadata from form instead of json since we use FormData
+    folder = request.form.get('folder')
+    is_media = request.form.get('media') == 'true'
+    
+    if 'files' not in request.files:
+        return jsonify({"success": False, "error": "No files"}), 400
+
+    files = request.files.getlist('files')
+    temp_dir = os.path.join(root_dir, "temp_rag", f"user_{user_id}")
+    os.makedirs(temp_dir, exist_ok=True)
+
+    # Save files locally BEFORE starting the thread to avoid 'read of closed file'
+    local_paths = []
+    for file in files:
+        if not file.filename: continue
+        lp = os.path.join(temp_dir, file.filename)
+        file.save(lp)
+        local_paths.append(lp)
+
+    # Process synchronously to keep the UI loading screen active as requested
+    def run_process(paths):
+        namespace = f"user_{user_id}_{folder}"
+        results_summary = []
+        for local_path in paths:
+            filename = os.path.basename(local_path)
+            try:
+                if not insert_pinecone:
+                    print(f"[RAG-ERROR] insert_pinecone module is offline. Cannot process {filename}.")
+                    results_summary.append({"file": filename, "success": False, "error": "Module Offline"})
+                    continue
+
+                # 1. Upload to Azure
+                blob_name = f"rag/user_{user_id}/{folder}/{filename}"
+                blob_client = container_client.get_blob_client(blob_name)
+                with open(local_path, "rb") as data:
+                    blob_client.upload_blob(data, overwrite=True)
+
+                # 2. Process for RAG
+                print(f"[RAG] Extracting intelligence from: {filename}")
+                text = universal_reader.read_file(local_path)
+                if text:
+                    insert_pinecone.insert_document(filename, text, namespace)
+                    print(f"[RAG] Neural Link Successful: {filename}")
+                    results_summary.append({"file": filename, "success": True})
+                else:
+                    results_summary.append({"file": filename, "success": False, "error": "No text extracted"})
+                
+            except Exception as e:
+                print(f"[RAG-ERROR] Failed to process {filename}: {e}")
+                results_summary.append({"file": filename, "success": False, "error": str(e)})
+            finally:
+                # 3. Cleanup
+                if os.path.exists(local_path):
+                    os.remove(local_path)
+        return results_summary
+
+    status_report = run_process(local_paths)
+    return jsonify({"success": True, "message": "Neural synchronization complete", "report": status_report})
 
 @app.route('/api/ask', methods=['POST'])
 def api_ask():
     if 'user' not in session: return jsonify({"answer": "Authorization required."})
     data = request.json
+    prompt = data.get('prompt')
+    namespace = data.get('namespace')
+    history = data.get('history', [])
     
-    import requests
-    # 🧪 Health Check Uplink
     try:
-        health_check = requests.get("http://127.0.0.1:5060/health", timeout=2)
-        if health_check.json().get("status") != "online":
-            return jsonify({"answer": "RAG Neural Core is still initializing. Please wait 10 seconds..."})
-    except:
-        return jsonify({"answer": "RAG Intelligence Core is offline. Check if Port 5060 is active."})
-
-    try:
-        res = requests.post("http://127.0.0.1:5060/ask", json=data)
-        return jsonify(res.json())
-    except:
-        return jsonify({"answer": "RAG Uplink Failure: The intelligence port refused the connection."})
+        answer = rag_answer.generate_answer(prompt, namespace, history)
+        # History persistence
+        try:
+            folder = namespace.split('_')[-1]
+            user_id_part = namespace.split('_')[1]
+            history_file = os.path.join(RAG_PATH, "users", f"user_{user_id_part}", folder, "chat_history.txt")
+            os.makedirs(os.path.dirname(history_file), exist_ok=True)
+            with open(history_file, "a", encoding="utf-8") as f:
+                f.write(f"USER: {prompt}\nAI: {answer}\n---\n")
+        except: pass
+        return jsonify({"answer": answer})
+    except Exception as e:
+        return jsonify({"answer": f"Neural Core Fault: {str(e)}"})
 
 @app.route('/api/get_chat_history', methods=['POST'])
 def get_chat_history_route():
     if 'user' not in session: return jsonify([])
     folder = request.json.get('folder')
     user_id = session['user_id']
-    history_file = os.path.join(RAG_BASE_PATH, "users", f"user_{user_id}", folder, "chat_history.txt")
+    history_file = os.path.join(RAG_PATH, "users", f"user_{user_id}", folder, "chat_history.txt")
     
     if not os.path.exists(history_file):
         return jsonify([])
@@ -501,22 +691,40 @@ def process_text_command():
         if matches: return jsonify({"response": "IDENT:" + matches[0]})
         return jsonify({"response": "User identity not found."})
 
+    # 📁 RAG Folder Creation (+folder or "create new")
+    if low_cmd.startswith("+folder") or low_cmd.startswith("create new"):
+        folder_name = low_cmd.replace("+folder", "").replace("create new", "").strip()
+        if 'user' in session and folder_name:
+            user_id = session['user_id']
+            # We already have a create_folder function logic, but here we do it via command
+            blob_name = f"rag/user_{user_id}/{folder_name}/.keep"
+            try:
+                blob_client = container_client.get_blob_client(blob_name)
+                blob_client.upload_blob(b"", overwrite=True)
+                return jsonify({"response": f"Neural Link: Folder '{folder_name}' created successfully."})
+            except Exception as e:
+                return jsonify({"response": f"Neural Core Fault: {str(e)}"})
+
     # 📁 RAG Folder Selection (select folder [name] OR select [name])
-    low_cmd = command.lower()
     if "select folder" in low_cmd or low_cmd.startswith("select "):
         folder_target = low_cmd.replace("select folder", "").replace("select", "").strip()
         if 'user' in session and folder_target:
             import difflib
             user_id = session['user_id']
-            path = os.path.join(RAG_BASE_PATH, "users", f"user_{user_id}")
-            os.makedirs(path, exist_ok=True)
-            existing_folders = [f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))]
-            
-            if existing_folders:
-                matches = difflib.get_close_matches(folder_target, existing_folders, n=1, cutoff=0.3)
-                if matches:
-                    best_match = matches[0]
-                    return jsonify({"response": f"FOLDER_SELECT:{best_match}"})
+            # Fetch existing folders from Azure to match
+            prefix = f"rag/user_{user_id}/"
+            try:
+                blobs = container_client.list_blobs(name_starts_with=prefix)
+                folders = set()
+                for b in blobs:
+                    parts = b.name[len(prefix):].split('/')
+                    if len(parts) > 0 and parts[0]: folders.add(parts[0])
+                
+                if folders:
+                    matches = difflib.get_close_matches(folder_target, list(folders), n=1, cutoff=0.3)
+                    if matches:
+                        return jsonify({"response": f"FOLDER_SELECT:{matches[0]}"})
+            except: pass
             return jsonify({"response": f"Neural Link: Folder '{folder_target}' not found."})
 
     # 📁 RAG Folder Creation (+folder)
@@ -527,7 +735,7 @@ def process_text_command():
         if len(parts) == 2 and 'user' in session:
             folder, subject = parts
             user_id = session['user_id']
-            path = os.path.join(RAG_BASE_PATH, "users", f"user_{user_id}", folder, subject)
+            path = os.path.join(RAG_PATH, "users", f"user_{user_id}", folder, subject)
             os.makedirs(path, exist_ok=True)
             return jsonify({"response": f"Subject '{subject}' created in '{folder}'."})
 

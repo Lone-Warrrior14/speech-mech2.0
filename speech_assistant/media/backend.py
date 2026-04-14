@@ -17,10 +17,6 @@ def launch_web_player():
 
     subprocess.Popen([sys.executable, player_path])
 
-    time.sleep(2)
-
-    webbrowser.open("http://127.0.0.1:5050")
-
 
 def list_movies():
 
@@ -30,11 +26,11 @@ def list_movies():
         print("No movies found.")
         return []
 
-    print("\nAvailable Movies\n")
+    print("\nAvailable Movies (Cloud)\n")
 
     for i, movie in enumerate(movies, start=1):
 
-        name = os.path.splitext(movie)[0]
+        name = os.path.splitext(movie['name'])[0]
 
         print(f"{i}. {name}")
 
@@ -42,10 +38,8 @@ def list_movies():
 
 
 def play_movie(movie):
-
-    url = f"http://127.0.0.1:5050/play/{movie}"
-
-    webbrowser.open(url)
+    # Playing movie is handled by the web UI now
+    pass
 
 
 def entertainment_mode():
@@ -58,3 +52,4 @@ def entertainment_mode():
     # The loop below is removed because it causes EOFError in background threads
     # and we now use the web-based interface for control.
     print("Web interface available at http://127.0.0.1:5050")
+    print("Admin Portal: http://127.0.0.1:5050/?role=admin")

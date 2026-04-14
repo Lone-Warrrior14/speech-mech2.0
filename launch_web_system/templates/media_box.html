@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPEECH-MECH | Media Box</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .movie-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .movie-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(10px);
+        }
+
+        .movie-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--primary);
+            box-shadow: 0 15px 30px rgba(240, 147, 251, 0.2);
+        }
+
+        .movie-card i {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        video {
+            width: 100%;
+            max-height: 70vh;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+            display: none;
+            background: black;
+        }
+
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        #playing-title {
+            margin: 0;
+            font-size: 1.4rem;
+            color: var(--primary);
+            font-weight: 700;
+        }
+        
+        .upload-status {
+            color: var(--primary);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .active-mic {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(79, 172, 254, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(79, 172, 254, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(79, 172, 254, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="premium-container" style="background-image: linear-gradient(rgba(10, 11, 30, 0.94), rgba(10, 11, 30, 0.94)), url('/static/img/dash_bg.png'); padding-top: 5rem; justify-content: flex-start;">
+        
+        <nav style="position: absolute; top: 2rem; width: 100%; display: flex; justify-content: space-between; padding: 0 4rem; box-sizing: border-box; z-index: 100;">
+            <div style="display: flex; align-items: center; gap: 1rem; cursor: pointer;" onclick="location.href='/dashboard'">
+                <img src="/static/img/ai_icon.png" alt="AI" style="width: 40px; height: 40px;">
+                <h2 style="margin: 0; font-weight: 700;">Media Box</h2>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+                {% if role == 'admin' %}
+                <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                    <button class="btn btn-secondary" id="uploadBtn" onclick="triggerUpload()" style="width: auto; padding: 0.5rem 1.5rem; margin: 0; border-color: var(--primary); color: var(--primary);">
+                        <i class="fas fa-upload"></i> Upload
+                    </button>
+                    <span id="uploadStatus" class="upload-status">Neural Uploading...</span>
+                </div>
+                <input type="file" id="fileInput" accept="video/*" style="display: none;" onchange="handleFileUpload()">
+                {% endif %}
+                <a href="/dashboard" class="btn btn-secondary" style="width: auto; padding: 0.5rem 1.5rem; margin: 0;">
+                    <i class="fas fa-arrow-left"></i> Dashboard
+                </a>
+            </div>
+        </nav>
+
+        <div style="text-align: center; margin-bottom: 4rem;">
+            <h1 style="font-size: 2.8rem; margin-bottom: 1rem; background: linear-gradient(135deg, #fff, var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Neural Entertainment Core</h1>
+            <p style="color: var(--secondary); max-width: 600px; margin: 0 auto;">High-fidelity media streaming from unified cloud storage.</p>
+        </div>
+
+        <div class="container" style="width: 90%; max-width: 1400px; margin: 0 auto;">
+            <div class="movie-grid" id="movie-grid">
+                {% if not movies %}
+                <div class="glass-card" style="grid-column: 1 / -1; text-align: center; padding: 4rem;">
+                    <i class="fas fa-cloud" style="font-size: 3rem; color: rgba(255,255,255,0.1); margin-bottom: 1.5rem; display: block;"></i>
+                    <p style="color: #666; font-size: 1.2rem;">Neural Link: No cloud media detected.</p>
+                </div>
+                {% endif %}
+                
+                {% for movie in movies %}
+                <div class="movie-card" onclick="playMovie('{{ movie.url }}', '{{ movie.name }}')" data-filename="{{ movie.name }}">
+                    <i class="fas fa-play-circle"></i>
+                    <div style="font-weight: 700; font-size: 1rem; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        {{ movie.name.rsplit('.', 1)[0].replace('_', ' ') }}
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--secondary); opacity: 0.6; margin-top: 0.5rem;">Cloud Storage</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div id="player-container" class="glass-card" style="display: none; padding: 2rem; margin-top: 2rem; border-color: var(--primary);">
+                <div class="player-header">
+                    <h3 id="playing-title">Synchronizing Neural Stream...</h3>
+                    <button class="btn btn-secondary" onclick="stopPlayback()" style="width: auto; margin:0; padding: 0.5rem 1rem; font-size: 0.8rem;">
+                        <i class="fas fa-times"></i> Close Stream
+                    </button>
+                </div>
+                <video id="player" controls>
+                    <source id="source">
+                </video>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Voice Command Button -->
+    <div class="voice-trigger" id="voiceBtn" onclick="toggleMicPower()">
+        <svg class="mic-svg" viewBox="0 0 24 24">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+    </div>
+
+    <script>
+        let micPowered = false;
+        let recognition = null;
+        let isSpeaking = false;
+
+        function speak(text) {
+            if (!text) return;
+            window.speechSynthesis.cancel();
+            if (micPowered && recognition) {
+                try { recognition.stop(); } catch(e) {}
+            }
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.onstart = () => { isSpeaking = true; };
+            msg.onend = () => {
+                isSpeaking = false;
+                if (micPowered) setTimeout(() => { if (micPowered && !isSpeaking) try { recognition.start(); } catch(e) {} }, 400);
+            };
+            window.speechSynthesis.speak(msg);
+        }
+
+        function playMovie(url, name) {
+            window.speechSynthesis.cancel();
+            const container = document.getElementById("player-container");
+            const player = document.getElementById("player");
+            const source = document.getElementById("source");
+            const title = document.getElementById("playing-title");
+            
+            container.style.display = "block";
+            player.style.display = "block";
+            source.src = url;
+            title.innerText = "Streaming: " + name.split('.')[0].replace(/_/g, ' ');
+            
+            player.load();
+            player.play();
+            
+            container.scrollIntoView({ behavior: 'smooth' });
+            speak("Initiating neural stream for " + name.split('.')[0]);
+        }
+
+        function stopPlayback() {
+            const player = document.getElementById("player");
+            player.pause();
+            document.getElementById("player-container").style.display = "none";
+            speak("Neural stream terminated.");
+        }
+
+        function triggerUpload() {
+            {% if role == 'admin' %}
+            document.getElementById("fileInput").click();
+            {% else %}
+            speak("Admin authorization required for archival.");
+            {% endif %}
+        }
+
+        async function handleFileUpload() {
+            const fileInput = document.getElementById("fileInput");
+            if (fileInput.files.length === 0) return;
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const status = document.getElementById("uploadStatus");
+            const btn = document.getElementById("uploadBtn");
+            
+            status.style.display = "block";
+            btn.disabled = true;
+            status.innerText = "Neural Uploading: " + file.name;
+            speak("Initiating cloud archival for " + file.name);
+
+            try {
+                const res = await fetch('/api/upload_media', { 
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (res.ok) {
+                    speak("Cloud synchronization successful.");
+                    location.reload();
+                } else {
+                    speak("Neural link failure.");
+                    status.innerText = "Upload Failed";
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                speak("Neural core error.");
+                status.innerText = "Error Occurred";
+                btn.disabled = false;
+            }
+        }
+
+        function toggleMicPower() {
+            const btn = document.getElementById('voiceBtn');
+            micPowered = !micPowered;
+            if (micPowered) {
+                btn.style.background = "linear-gradient(135deg, #00f2fe, #4facfe)";
+                btn.classList.add('active-mic');
+                startContinuousListening();
+            } else {
+                btn.style.background = "linear-gradient(135deg, #f093fb, #f5576c)";
+                btn.classList.remove('active-mic');
+                if (recognition) try { recognition.stop(); } catch(e) {}
+            }
+        }
+
+        function startContinuousListening() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return;
+            
+            if (recognition) try { recognition.stop(); } catch(e) {}
+            
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onresult = async (event) => {
+                if (isSpeaking) return;
+                const command = event.results[event.results.length - 1][0].transcript.toLowerCase();
+                
+                if (command.includes("go back") || command.includes("dashboard") || command.includes("main")) {
+                    window.location.href = '/dashboard';
+                } else if (command.includes("upload")) {
+                    triggerUpload();
+                } else if (command.includes("play")) {
+                    const cards = document.querySelectorAll('.movie-card');
+                    let found = false;
+                    for (let card of cards) {
+                        const title = card.innerText.toLowerCase();
+                        if (command.includes(title)) {
+                            card.click();
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) speak("Cloud movie title not found in archives.");
+                } else if (command.includes("stop") || command.includes("close player") || command.includes("pause")) {
+                    stopPlayback();
+                }
+            };
+            
+            recognition.onend = () => { if (micPowered && !isSpeaking) setTimeout(() => { try { recognition.start(); } catch(e) {} }, 300); };
+            try { recognition.start(); } catch(e) {}
+        }
+
+        window.onload = () => {
+            // Set Mic ON by default
+            micPowered = true;
+            const btn = document.getElementById('voiceBtn');
+            btn.style.background = "linear-gradient(135deg, #00f2fe, #4facfe)";
+            btn.classList.add('active-mic');
+            startContinuousListening();
+
+            setTimeout(() => {
+                if (!isSpeaking) speak("Neural Media Box active.");
+            }, 1000);
+        };
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault(); 
+                window.speechSynthesis.cancel();
+                isSpeaking = false;
+                if (!micPowered) toggleMicPower();
+                else if (recognition) try { recognition.stop(); } catch(err) {}
+            }
+        });
+    </script>
+</body>
+</html>

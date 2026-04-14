@@ -1,8 +1,5 @@
 import os
-try:
-    import mysql.connector
-except ImportError:
-    mysql = None
+import pyodbc
 import difflib
 import bcrypt
 import face_recognition
@@ -16,15 +13,21 @@ load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
 
 def get_connection():
-    if mysql is None:
-        raise ImportError("MySQL driver not installed. Please run: pip install mysql-connector-python")
-    return mysql.connector.connect(
-        host="127.0.0.1",
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME"),
-        port=3306
+    az_server = os.getenv("az_server")
+    az_database = os.getenv("az_database")
+    az_username = os.getenv("az_username")
+    az_password = os.getenv("az_password")
+    
+    conn_str = (
+        f"DRIVER={{ODBC Driver 18 for SQL Server}};"
+        f"SERVER={az_server};"
+        f"DATABASE={az_database};"
+        f"UID={az_username};"
+        f"PWD={az_password};"
+        f"Encrypt=yes;"
+        f"TrustServerCertificate=yes;"
     )
+    return pyodbc.connect(conn_str)
 
 
 # ---------------- USERNAME LOGIC ----------------
@@ -41,43 +44,46 @@ def get_all_usernames():
 
 def get_all_users_with_ids():
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute("SELECT id, username FROM users")
     rows = cursor.fetchall()
+    
+    result = [{"id": row.id, "username": row.username} for row in rows]
+    
     cursor.close()
     conn.close()
-    return rows
+    return result
 
 
 def get_user_id(username):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
     result = cursor.fetchone()
     cursor.close()
     conn.close()
     if not result:
         return None
-    return result["id"]
+    return result.id
 
 
 def get_user_role(username):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT role FROM users WHERE username = %s", (username,))
+    cursor = conn.cursor()
+    cursor.execute("SELECT role FROM users WHERE username = ?", (username,))
     result = cursor.fetchone()
     cursor.close()
     conn.close()
     if not result:
         return None
-    return result.get("role")
+    return result.role
 
 
 def delete_user(username):
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("DELETE FROM users WHERE username = %s", (username,))
+        cursor.execute("DELETE FROM users WHERE username = ?", (username,))
         conn.commit()
         success = True
     except Exception as e:
@@ -92,7 +98,7 @@ def delete_user_by_id(user_id):
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
         conn.commit()
         success = True
     except Exception as e:
@@ -109,16 +115,18 @@ def create_user(username):
     try:
         default_greeting = f"Hello, {username}!"
         cursor.execute(
-            "INSERT INTO users (username, greeting) VALUES (%s, %s)", 
+            "INSERT INTO users (username, greeting) VALUES (?, ?)", 
             (username, default_greeting)
         )
         conn.commit()
         success = True
-    except mysql.connector.IntegrityError:
-        success = False # User likely already exists
     except Exception as e:
-        print(f"DB Error: {e}")
-        success = False
+        # Check for unique constraint violation (username already exists)
+        if "Violation of UNIQUE KEY constraint" in str(e) or "Cannot insert duplicate key" in str(e):
+             success = False
+        else:
+            print(f"DB Error: {e}")
+            success = False
     cursor.close()
     conn.close()
     return success
@@ -164,9 +172,9 @@ def fuzzy_match_user(spoken_name, threshold=0.4):
 
 def get_password_hash(username):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute(
-        "SELECT password_hash FROM users WHERE username = %s",
+        "SELECT password_hash FROM users WHERE username = ?",
         (username,)
     )
     result = cursor.fetchone()
@@ -174,7 +182,7 @@ def get_password_hash(username):
     conn.close()
     if not result:
         return None
-    return result["password_hash"]
+    return result.password_hash
 
 
 def verify_password(username, input_password):
@@ -197,7 +205,7 @@ def set_user_password(username, plain_password):
         bcrypt.gensalt()
     ).decode()
     cursor.execute(
-        "UPDATE users SET password_hash = %s WHERE username = %s",
+        "UPDATE users SET password_hash = ? WHERE username = ?",
         (hashed, username)
     )
     conn.commit()
@@ -211,9 +219,10 @@ def set_user_password(username, plain_password):
 def switch_active_user(username):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE users SET is_default = FALSE WHERE id > 0")
+    # SQL Server uses 0 and 1 for bit/boolean columns usually, or bit literals.
+    cursor.execute("UPDATE users SET is_default = 0")
     cursor.execute(
-        "UPDATE users SET is_default = TRUE WHERE username = %s",
+        "UPDATE users SET is_default = 1 WHERE username = ?",
         (username,)
     )
     conn.commit()
@@ -290,7 +299,7 @@ def register_face(username):
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "UPDATE users SET face_encoding = %s WHERE username = %s",
+            "UPDATE users SET face_encoding = ? WHERE username = ?",
             (serialized, username)
         )
         conn.commit()
@@ -308,30 +317,30 @@ def register_face(username):
 
 def has_face(username):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute(
-        "SELECT face_encoding FROM users WHERE username = %s",
+        "SELECT face_encoding FROM users WHERE username = ?",
         (username,)
     )
     result = cursor.fetchone()
     cursor.close()
     conn.close()
-    if not result or not result["face_encoding"]:
+    if not result or not result.face_encoding:
         return False
     return True
 
 def verify_face(username, cap=None):
     from src.anti_spoof import is_real_face
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT face_encoding FROM users WHERE username = %s", (username,))
+    cursor = conn.cursor()
+    cursor.execute("SELECT face_encoding FROM users WHERE username = ?", (username,))
     result = cursor.fetchone()
     cursor.close()
     conn.close()
 
-    if not result or not result["face_encoding"]: return False
+    if not result or not result.face_encoding: return False
 
-    stored_encoding = pickle.loads(bytes.fromhex(result["face_encoding"]))
+    stored_encoding = pickle.loads(bytes.fromhex(result.face_encoding))
     
     created_cap = False
     if cap is None:
@@ -390,19 +399,19 @@ def verify_face(username, cap=None):
 def verify_face_from_frame(username, frame):
     from src.anti_spoof import is_real_face
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute(
-        "SELECT face_encoding FROM users WHERE username = %s",
+        "SELECT face_encoding FROM users WHERE username = ?",
         (username,)
     )
     result = cursor.fetchone()
     cursor.close()
     conn.close()
 
-    if not result or not result["face_encoding"]:
+    if not result or not result.face_encoding:
         return False
 
-    stored_encoding = pickle.loads(bytes.fromhex(result["face_encoding"]))
+    stored_encoding = pickle.loads(bytes.fromhex(result.face_encoding))
     
     # Check liveness (Safety fallback if model missing)
     try:

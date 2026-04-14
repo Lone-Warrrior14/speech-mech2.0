@@ -24,9 +24,16 @@ def main():
     
     # Execute the launch script
     try:
-        subprocess.run([python_exe, launcher_path], cwd=root_dir)
+        process = subprocess.Popen([python_exe, launcher_path], cwd=root_dir)
+        process.wait()
     except KeyboardInterrupt:
-        print("\n[SHUTDOWN] Launcher terminated by user.")
+        print("\n[SHUTDOWN] Launcher interrupted. Synchronizing shutdown...")
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+        print("[SHUTDOWN] System Offline.")
     except Exception as e:
         print(f"\n[CRITICAL] Launcher failed: {e}")
 

@@ -1,0 +1,22 @@
+d:\SPEECH_MECH3\SPEECH_MECH\image gen\backup\old_index.html
+d:\SPEECH_MECH3\SPEECH_MECH\image gen\templates\index.html
+d:\SPEECH_MECH3\SPEECH_MECH\launch_web_system\templates\code_assist.html
+d:\SPEECH_MECH3\SPEECH_MECH\launch_web_system\templates\dashboard.html
+d:\SPEECH_MECH3\SPEECH_MECH\launch_web_system\templates\login.html
+d:\SPEECH_MECH3\SPEECH_MECH\launch_web_system\templates\rag.html
+d:\SPEECH_MECH3\SPEECH_MECH\launch_web_system\templates\settings.html
+d:\SPEECH_MECH3\SPEECH_MECH\speech_assistant\media\templates\index.html
+d:\SPEECH_MECH3\SPEECH_MECH\stitch_file_port_dashboard\stitch_file_port_dashboard\dashboard_quantum_obsidian\code.html
+d:\SPEECH_MECH3\SPEECH_MECH\stitch_file_port_dashboard\stitch_file_port_dashboard\dashboard_speech_mech_voice\code.html
+d:\SPEECH_MECH3\SPEECH_MECH\stitch_file_port_dashboard\stitch_file_port_dashboard\image_synthesis_quantum_obsidian\code.html
+d:\SPEECH_MECH3\SPEECH_MECH\stitch_file_port_dashboard\stitch_file_port_dashboard\image_synthesis_speech_mech_voice\code.html
+d:\SPEECH_MECH3\SPEECH_MECH\stitch_file_port_dashboard\stitch_file_port_dashboard\login_face_authentication\code.html
+d:\SPEECH_MECH3\SPEECH_MECH\stitch_file_port_dashboard\stitch_file_port_dashboard\login_quantum_obsidian\code.html
+d:\SPEECH_MECH3\SPEECH_MECH\stitch_file_port_dashboard\stitch_file_port_dashboard\login_speech_mech_voice\code.html
+d:\SPEECH_MECH3\SPEECH_MECH\stitch_file_port_dashboard\stitch_file_port_dashboard\omni_coder_speech_mech_voice\code.html
+d:\SPEECH_MECH3\SPEECH_MECH\stitch_file_port_dashboard\stitch_file_port_dashboard\rag_intel_quantum_obsidian\code.html
+d:\SPEECH_MECH3\SPEECH_MECH\stitch_file_port_dashboard\stitch_file_port_dashboard\rag_intel_speech_mech_voice_1\code.html
+d:\SPEECH_MECH3\SPEECH_MECH\stitch_file_port_dashboard\stitch_file_port_dashboard\rag_intel_speech_mech_voice_2\code.html
+d:\SPEECH_MECH3\SPEECH_MECH\stitch_file_port_dashboard\stitch_file_port_dashboard\settings_speech_mech_voice\code.html
+d:\SPEECH_MECH3\SPEECH_MECH\unwanted\code_assists\templates\index.html
+d:\SPEECH_MECH3\SPEECH_MECH\unwanted\memorysystem\templates\index.html

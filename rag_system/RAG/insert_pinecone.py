@@ -2,10 +2,10 @@ import os
 from dotenv import load_dotenv
 from pinecone import Pinecone
 from embed import get_embedding
-from chunk import chunk_text
+from rag_chunker import chunk_text
 
 # Environment Initialization
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))

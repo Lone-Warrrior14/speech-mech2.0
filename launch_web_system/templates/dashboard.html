@@ -91,13 +91,14 @@
         function speak(text) {
             if (!text) return;
             window.speechSynthesis.cancel();
+            
+            // Stop listening immediately
+            if (micPowered && recognition) {
+                try { recognition.stop(); } catch(e) {}
+            }
+
             const msg = new SpeechSynthesisUtterance(text);
-            msg.onstart = () => {
-                isSpeaking = true;
-                if (micPowered && recognition) {
-                    try { recognition.stop(); } catch(e) {}
-                }
-            };
+            msg.onstart = () => { isSpeaking = true; };
             msg.onend = () => {
                 isSpeaking = false;
                 if (micPowered) {
@@ -215,13 +216,31 @@
                 }
             };
 
-            recognition.start();
+            if (!isSpeaking) {
+                try { recognition.start(); } catch(e) {}
+            }
         }
 
         window.onload = () => {
              // Delay slightly to allow full system synchronization
              setTimeout(toggleMicPower, 1000);
         };
+
+        // 🛰️ Neural Override: Space key to stop speaking and start mic
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault(); // Prevent page scroll
+                window.speechSynthesis.cancel();
+                isSpeaking = false;
+                
+                if (!micPowered) {
+                    toggleMicPower();
+                } else if (recognition) {
+                    try { recognition.stop(); } catch(err) {}
+                    // The onend handler will automatically restart it if micPowered is true
+                }
+            }
+        });
     </script>
 </body>
 </html>

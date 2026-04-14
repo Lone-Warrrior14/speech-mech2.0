@@ -26,3 +26,26 @@ AI: Tim Berners-Lee is the founder of the World Wide Web and the system of inter
 USER: who is the founder
 AI: The founder mentioned earlier is Tim Berners-Lee.
 ---
+USER: who is the founder of semantic web
+AI: The founder of the Semantic Web is not explicitly mentioned in the given context. However, based on the broader context of the World Wide Web, the founder of the World Wide Web is Tim Berners-Lee, and he is also often associated with the development of the Semantic Web.
+---
+USER: what is the full form of www
+AI: The full form of WWW is World Wide Web.
+---
+USER: welcome to speech Mac
+AI: It appears to be unrelated to the given context.
+---
+USER: who is the founder
+AI: The founder of the Semantic Web is often associated with Tim Berners-Lee.
+---
+USER: the failure of the somatic web is often associated with temperature
+AI: There is no mention of "somatic web" in the given context, and you don't seem to have asked a question that directly relates to the provided information. However, if you're asking about a topic not directly related to the provided context, then the given answer cannot be provided accurately.
+
+But if I assume you might be asking about the relation of the Semantic Web to temperature, that wouldn't be a correct or relevant conclusion given the context.
+
+
+However, considering there were two statements of "the web" and a brief mention on semantic web I'd say the failure of the semantic web is often associated with data inconsistencies rather than temperature. However this is just a guess based on the provided information, the correct answer may vary based on more context and information.
+---
+USER: who is the founder
+AI: The founder of the Semantic Web is often associated with Tim Berners-Lee.
+---

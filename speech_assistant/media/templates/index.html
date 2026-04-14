@@ -3,316 +3,373 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SPEECH-MECH | Media Box</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Media Box | Premium Streaming</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #f093fb;
-            --secondary: #f5576c;
-            --bg-dark: #0a0b1e;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #8b5cf6;
             --glass: rgba(255, 255, 255, 0.05);
             --glass-border: rgba(255, 255, 255, 0.1);
-            --text: #e0e0e0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
         }
 
         body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text);
-            background-image: radial-gradient(circle at top right, rgba(245, 87, 108, 0.1), transparent);
+            background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+            color: var(--text-main);
             min-height: 100vh;
+            padding: 40px;
+            overflow-x: hidden;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 50px;
+            position: relative;
         }
 
-        .glass-card {
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        h2, h3 {
-            background: linear-gradient(135deg, white, var(--primary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-top: 0;
-        }
-
-        .movie-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .movie-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 1.5rem;
-            text-align: center;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .movie-card:hover {
-            transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.08);
-            border-color: var(--primary);
-        }
-
-        .movie-card i {
+        .header h1 {
             font-size: 2.5rem;
-            margin-bottom: 1rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .admin-badge {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.4);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 24px;
+            transition: all 0.4s ease;
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(225deg, transparent, rgba(99, 102, 241, 0.1));
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .card:hover {
+            transform: scale(1.03);
+            border-color: var(--primary);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .card-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-meta {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Player Modal Styles */
+        #playerOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .player-container {
+            width: 100%;
+            max-width: 1000px;
+            position: relative;
+            background: #000;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--glass-border);
         }
 
         video {
             width: 100%;
-            border-radius: 16px;
-            border: 1px solid var(--glass-border);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            display: none;
+            display: block;
         }
 
-        .btn {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border: none;
-            padding: 0.8rem 1.5rem;
-            border-radius: 10px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.3s;
-            text-decoration: none;
-            display: inline-flex;
+        .player-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 30px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 0.5rem;
+            z-index: 10;
         }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        .close-btn {
+            background: var(--glass);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
         }
 
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--glass-border);
+        .close-btn:hover {
+            background: rgba(239, 68, 68, 0.5);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--glass-border);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 100px;
+            color: var(--text-muted);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem;">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <img src="static/img/speech_mech.png" alt="Logo" style="width: 50px; height: 50px;">
-                <div>
-                    <h2 style="font-size: 2rem; margin: 0;">Media Box</h2>
-                    <p style="color: var(--primary); margin: 0.2rem 0 0 0;">High-Fidelity Cinema Experience</p>
-                </div>
-            </div>
-            <div style="display: flex; gap: 1rem;">
-                {% if role == 'admin' %}
-                <button class="btn" onclick="uploadMedia()">
-                    <i class="fas fa-plus-circle"></i> Upload Media
-                </button>
-                {% endif %}
-                <a href="/dashboard" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Dashboard
-                </a>
-            </div>
-        </header>
 
-        <div class="movie-grid">
-            {% for movie in movies %}
-            <div class="movie-card" onclick="playMovie('{{movie}}')" data-filename="{{movie}}">
-                <i class="fas fa-file-video"></i>
-                <div class="movie-title" style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    {{ movie.rsplit('.', 1)[0] }}
-                </div>
-            </div>
-            {% endfor %}
+    <header class="header">
+        <div>
+            <h1>Media Box</h1>
+            <p style="color: var(--text-muted); margin-top: 5px;">Stream your collection from the cloud</p>
         </div>
+        
+        <div style="display: flex; align-items: center; gap: 20px;">
+            {% if role == 'admin' %}
+            <span class="admin-badge">Admin Access</span>
+            <button class="upload-btn" onclick="uploadMedia()">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                Upload Movie
+            </button>
+            {% endif %}
+        </div>
+    </header>
 
-        <div id="player-container" class="glass-card" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h3 id="playing-title" style="margin: 0; font-size: 1.2rem;">Now Playing</h3>
-                <button class="btn btn-secondary" onclick="stopPlayback()" style="padding: 0.4rem 1rem; font-size: 0.8rem;">Close Player</button>
+    <div class="grid">
+        {% if not movies %}
+        <div class="empty-state">
+            <p>No movies found in your cloud library.</p>
+        </div>
+        {% endif %}
+
+        {% for movie in movies %}
+        <div class="card" onclick="playMovie('{{movie.url}}','{{movie.name}}')">
+            <div class="card-icon">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
             </div>
-            <video id="player" controls>
-                <source id="source">
+            <div class="card-name" title="{{movie.name}}">{{ movie.name }}</div>
+            <div class="card-meta">Cloud Storage • MP4</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div id="playerOverlay">
+        <div class="player-container">
+            <div class="player-header">
+                <h3 id="playerTitle" style="font-weight: 600;"></h3>
+                <button class="close-btn" onclick="closePlayer()">&times;</button>
+            </div>
+            <video id="videoPlayer" controls>
+                <source id="videoSource">
+                Your browser does not support the video tag.
             </video>
         </div>
     </div>
 
-    <!-- Global Voice Button -->
-    <div class="voice-trigger" id="voiceBtn" onclick="toggleVoice()">
-        <svg class="mic-svg" viewBox="0 0 24 24">
-            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-        </svg>
-    </div>
-
-    <style>
-        .voice-trigger {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 1000;
-        }
-        .voice-trigger.active { animation: pulse 1.5s infinite; }
-        .mic-svg { width: 30px; height: 30px; fill: white; }
-        @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(240, 147, 251, 0.7); }
-            70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(240, 147, 251, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(240, 147, 251, 0); }
-        }
-    </style>
-
     <script>
-        function playMovie(name) {
-            // Kill any outgoing speech synthesis to focus on movie audio
-            window.speechSynthesis.cancel();
+        function playMovie(url, name) {
+            const overlay = document.getElementById("playerOverlay");
+            const player = document.getElementById("videoPlayer");
+            const source = document.getElementById("videoSource");
+            const title = document.getElementById("playerTitle");
+
+            title.innerText = name;
+            source.src = url;
             
-            document.getElementById("player-container").style.display = "block";
-            const player = document.getElementById("player");
-            const source = document.getElementById("source");
-            const title = document.getElementById("playing-title");
-            
-            player.style.display = "block";
-            source.src = "play/" + name;
-            title.innerText = "Playing: " + name;
-            
+            overlay.style.display = "flex";
             player.load();
             player.play();
-            
-            document.getElementById("player-container").scrollIntoView({ behavior: 'smooth' });
         }
 
-        function stopPlayback() {
-            const player = document.getElementById("player");
+        function closePlayer() {
+            const overlay = document.getElementById("playerOverlay");
+            const player = document.getElementById("videoPlayer");
+            
             player.pause();
-            document.getElementById("player-container").style.display = "none";
+            player.src = "";
+            overlay.style.display = "none";
         }
 
         async function uploadMedia() {
-            const res = await fetch('api/upload_media', { method: 'POST' });
-            if (res.ok) alert("Media selection initiated. Please check your screen.");
-        }
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = "video/*";
 
-        let micPowered = false;
-        let recognition = null;
-        let isSpeaking = false;
+            input.onchange = async () => {
+                const file = input.files[0];
+                if (!file) return;
 
-        function speak(text) {
-            if (!text) return;
-            window.speechSynthesis.cancel();
-            const msg = new SpeechSynthesisUtterance(text);
-            msg.onstart = () => {
-                isSpeaking = true;
-                if (micPowered && recognition) {
-                    try { recognition.stop(); } catch(e) {}
-                }
-            };
-            msg.onend = () => {
-                isSpeaking = false;
-                if (micPowered) {
-                    setTimeout(() => {
-                        if (micPowered && !isSpeaking) {
-                            try { recognition.start(); } catch(e) {}
-                        }
-                    }, 300);
-                }
-            };
-            window.speechSynthesis.speak(msg);
-        }
+                const formData = new FormData();
+                formData.append("file", file);
 
-        async function toggleVoice() {
-            const btn = document.getElementById('voiceBtn');
-            micPowered = !micPowered;
-            
-            if (micPowered) {
-                btn.style.background = "linear-gradient(135deg, #00f2fe, #4facfe)";
-                startListening();
-            } else {
-                btn.style.background = "linear-gradient(135deg, #f093fb, #f5576c)";
-                if (recognition) try { recognition.stop(); } catch(e) {}
-            }
-        }
+                // Show basic loading state
+                const btn = document.querySelector(".upload-btn");
+                const originalText = btn.innerHTML;
+                btn.innerHTML = "Uploading...";
+                btn.disabled = true;
 
-        function startListening() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) return;
+                try {
+                    const res = await fetch("/api/upload_media", {
+                        method: "POST",
+                        body: formData
+                    });
 
-            recognition = new SpeechRecognition();
-            recognition.lang = 'en-US';
-            recognition.onstart = () => document.getElementById('voiceBtn').classList.add('active');
-            recognition.onresult = async (event) => {
-                if (isSpeaking) return;
-                const command = event.results[0][0].transcript.toLowerCase();
-                
-                if (command.includes("go back") || command.includes("dashboard") || command.includes("main menu")) {
-                    window.location.href = '/dashboard';
-                } else if (command.includes("logout") || command.includes("sign out")) {
-                    window.location.href = '/logout';
-                } else if (command.includes("setting") || command.includes("profile") || command.includes("password") || command.includes("face")) {
-                    window.location.href = '/settings';
-                } else if (command.includes("play")) {
-                    const cards = document.querySelectorAll('.movie-card');
-                    for (let card of cards) {
-                        const title = card.querySelector('.movie-title').innerText.toLowerCase();
-                        if (command.includes(title)) {
-                            const filename = card.getAttribute('data-filename');
-                            speak("Opening " + title);
-                            playMovie(filename);
-                            return;
-                        }
+                    if (res.ok) {
+                        alert("Upload successful!");
+                        location.reload();
+                    } else {
+                        alert("Upload failed. Please check server logs.");
                     }
-                } else if (command.includes("stop") || command.includes("close player")) {
-                    speak("Closing player.");
-                    stopPlayback();
-                } else if (command.includes("upload")) {
-                    uploadMedia();
+                } catch (err) {
+                    alert("An error occurred during upload.");
+                } finally {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
                 }
             };
-            recognition.onend = () => {
-                document.getElementById('voiceBtn').classList.remove('active');
-                if (micPowered && !isSpeaking) {
-                    setTimeout(() => {
-                        if (micPowered && !isSpeaking) {
-                            try { recognition.start(); } catch(e) {}
-                        }
-                    }, 300);
-                }
-            };
-            recognition.start();
+
+            input.click();
         }
 
-        window.onload = () => {
-            // System Voice Activation by default
-            setTimeout(toggleVoice, 1000);
-        };
+        // Close player on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closePlayer();
+        });
     </script>
+
 </body>
 </html>

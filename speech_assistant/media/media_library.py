@@ -1,22 +1,40 @@
 import os
+from azure.storage.blob import BlobServiceClient
+from dotenv import load_dotenv
 
-BASE_DIR = os.path.dirname(__file__)
-MEDIA_FOLDER = os.path.join(BASE_DIR, "media", "movies")
+# Load environment variables
+load_dotenv()
+
+AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING")
+CONTAINER_NAME = os.getenv("CONTAINER_NAME")
 
 VIDEO_EXT = (".mp4", ".mkv", ".avi", ".mov")
 
+def get_azure_client():
+    if not AZURE_CONNECTION_STRING:
+        return None
+    return BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING)
 
 def get_movies():
-
-    if not os.path.exists(MEDIA_FOLDER):
-        os.makedirs(MEDIA_FOLDER)
-
+    """Fetches movies from Azure Blob Storage."""
     movies = []
-
-    for file in os.listdir(MEDIA_FOLDER):
-
-        if file.lower().endswith(VIDEO_EXT):
-
-            movies.append(file)
-
+    
+    blob_service_client = get_azure_client()
+    if not blob_service_client:
+        return []
+        
+    container_client = blob_service_client.get_container_client(CONTAINER_NAME)
+    
+    try:
+        blobs = container_client.list_blobs(name_starts_with="movies/")
+        for blob in blobs:
+            if blob.name.lower().endswith(VIDEO_EXT):
+                url = f"https://{blob_service_client.account_name}.blob.core.windows.net/{CONTAINER_NAME}/{blob.name}"
+                movies.append({
+                    "name": os.path.basename(blob.name),
+                    "url": url
+                })
+    except Exception as e:
+        print(f"Error fetching movies from Azure: {e}")
+        
     return movies

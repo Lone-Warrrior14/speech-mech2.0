@@ -1,6 +1,6 @@
 from pinecone import Pinecone
 from embed import get_embedding
-from chunk import chunk_text
+from rag_chunker import chunk_text
 import os
 from dotenv import load_dotenv
 

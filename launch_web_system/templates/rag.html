@@ -29,6 +29,27 @@
         .item-list li:hover { background: var(--glass); color: white; }
         .item-list li.active { background: rgba(79, 172, 254, 0.15); color: var(--primary); border: 1px solid rgba(0, 242, 254, 0.3); }
         .mic-svg { width: 30px; height: 30px; fill: white; }
+        
+        .upload-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .active-mic {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(79, 172, 254, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(79, 172, 254, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(79, 172, 254, 0); }
+        }
     </style>
 </head>
 <body>
@@ -60,12 +81,13 @@
             <header class="chat-header" style="padding: 1rem 2rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
                 <span id="current-path" style="color: var(--secondary); font-size: 0.9rem;">Intelligence Workspace</span>
                 <div style="display: flex; gap: 0.5rem;">
-                    <button class="btn btn-secondary" style="width: auto; padding: 0.5rem 1rem; margin: 0; font-size: 0.8rem;" onclick="uploadFiles(false)">
+                    <button class="btn btn-secondary" style="width: auto; padding: 0.5rem 1rem; margin: 0; font-size: 0.8rem;" onclick="triggerUpload(false)">
                         <i class="fas fa-file-upload"></i> Docs
                     </button>
-                    <button class="btn btn-secondary" style="width: auto; padding: 0.5rem 1rem; margin: 0; font-size: 0.8rem; background: rgba(121, 40, 202, 0.2);" onclick="uploadFiles(true)">
+                    <button class="btn btn-secondary" style="width: auto; padding: 0.5rem 1rem; margin: 0; font-size: 0.8rem; background: rgba(121, 40, 202, 0.2);" onclick="triggerUpload(true)">
                         <i class="fas fa-microphone-alt"></i> Media
                     </button>
+                    <input type="file" id="fileInput" multiple style="display: none;" onchange="handleFileUpload()">
                 </div>
             </header>
             <div class="chat-messages" id="chat-messages" style="flex: 1; overflow-y: auto; padding: 2rem;"></div>
@@ -76,6 +98,13 @@
                 </button>
             </div>
         </main>
+    </div>
+
+    <!-- Upload Status Overlay -->
+    <div id="uploadOverlay" class="upload-overlay">
+        <i class="fas fa-cloud-upload-alt" style="font-size: 4rem; color: var(--primary); margin-bottom: 1.5rem;"></i>
+        <h2 style="color: white; margin-bottom: 1rem;">Neural Cloud Archival</h2>
+        <p id="uploadStatus" style="color: var(--secondary);">Synchronizing intelligence blocks...</p>
     </div>
 
     <div class="voice-trigger" id="voiceBtn" onclick="toggleMicPower()">
@@ -91,25 +120,26 @@
         let micPowered = false;
         let recognition = null;
         let isSpeaking = false;
+        let isMediaUpload = false;
 
         function speak(text) {
             if (!text) return;
             window.speechSynthesis.cancel();
+            
+            if (micPowered && recognition) {
+                try { recognition.stop(); } catch(e) {}
+            }
+
             const msg = new SpeechSynthesisUtterance(text);
-            msg.onstart = () => {
-                isSpeaking = true;
-                if (micPowered && recognition) {
-                    try { recognition.stop(); } catch(e) {}
-                }
-            };
+            msg.onstart = () => { isSpeaking = true; };
             msg.onend = () => {
                 isSpeaking = false;
                 if (micPowered) {
-                    setTimeout(() => {
+                    setTimeout(() => { 
                         if (micPowered && !isSpeaking) {
-                            try { recognition.start(); } catch(e) {}
+                            try { recognition.start(); } catch(e) {} 
                         }
-                    }, 300);
+                    }, 400);
                 }
             };
             window.speechSynthesis.speak(msg);
@@ -117,22 +147,29 @@
 
         window.onload = async () => {
             await loadFolders();
+            
+            // Set Mic ON by default
+            micPowered = true;
+            const btn = document.getElementById('voiceBtn');
+            btn.style.background = "linear-gradient(135deg, #00f2fe, #4facfe)";
+            btn.classList.add('active-mic');
+            startContinuousListening();
+
             const params = new URLSearchParams(window.location.search);
-            if (params.get('auto_upload')) setTimeout(uploadFiles, 1500);
+            if (params.get('auto_upload')) setTimeout(() => triggerUpload(false), 1500);
             
             const target = params.get('select_folder');
             if (target) {
-                const listItems = document.querySelectorAll('#folder-list li');
-                for (let li of listItems) {
-                    if (li.innerText.trim() === target) {
-                        selectFolder(target, li);
-                        break;
+                setTimeout(() => {
+                    const listItems = document.querySelectorAll('#folder-list li');
+                    for (let li of listItems) {
+                        if (li.innerText.trim() === target) {
+                            selectFolder(target, li);
+                            break;
+                        }
                     }
-                }
+                }, 1000);
             }
-            
-            // Activate voice system by default
-            setTimeout(toggleMicPower, 1000);
         };
 
         function toggleMicPower() {
@@ -140,29 +177,34 @@
             micPowered = !micPowered;
             if (micPowered) {
                 btn.style.background = "linear-gradient(135deg, #00f2fe, #4facfe)";
+                btn.classList.add('active-mic');
                 startContinuousListening();
             } else {
                 btn.style.background = "linear-gradient(135deg, #f093fb, #f5576c)";
-                if (recognition) recognition.stop();
+                btn.classList.remove('active-mic');
+                if (recognition) try { recognition.stop(); } catch(e) {}
             }
         }
 
         function startContinuousListening() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) return;
+            
+            if (recognition) try { recognition.stop(); } catch(e) {}
+            
             recognition = new SpeechRecognition();
             recognition.lang = 'en-US';
-            recognition.continuous = false;
+            recognition.continuous = false; // We use onend loop for better reliability
+            recognition.interimResults = false;
 
-            recognition.onstart = () => document.getElementById('voiceBtn').classList.add('active');
             recognition.onresult = (event) => {
                 if (isSpeaking) return;
                 const command = event.results[0][0].transcript;
                 document.getElementById('user-input').value = command;
                 handleVoiceCommand(command);
             };
+
             recognition.onend = () => {
-                document.getElementById('voiceBtn').classList.remove('active');
                 if (micPowered && !isSpeaking) {
                     setTimeout(() => {
                         if (micPowered && !isSpeaking) {
@@ -172,60 +214,65 @@
                 }
             };
 
-            recognition.onerror = (event) => {
-                console.error("RAG Recognition Error:", event.error);
-                if (event.error === 'not-allowed') {
-                    appendMessage('ai', "Microphone access denied. Please check permissions.");
-                }
-            };
-            recognition.start();
+            try { recognition.start(); } catch(e) {}
         }
 
         async function handleVoiceCommand(command) {
-            const low = command.toLowerCase();
-            if (low.includes("go back") || low.includes("dashboard")) window.location.href = '/dashboard';
-            else if (low.includes("upload")) uploadFiles();
-            else if (low.startsWith("+folder") || low.startsWith("select ") || low.includes("select folder")) {
-                const res = await fetch('/api/process_text_command', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ command })
-                });
-                const data = await res.json();
-                
-                if (data.response.startsWith("FOLDER_SELECT:")) {
-                    const targetName = data.response.replace("FOLDER_SELECT:", "");
-                    const listItems = document.querySelectorAll('#folder-list li');
-                    for (let li of listItems) {
-                        if (li.innerText.trim() === targetName) {
-                            selectFolder(targetName, li);
-                            appendMessage('ai', `Neural Link: Folder '${targetName}' selected.`);
-                            speak(`Folder ${targetName} selected.`);
-                            return;
-                        }
+            const low = command.toLowerCase().trim();
+            
+            // 🚀 Direct Command Mapping
+            if (low === "upload") {
+                triggerUpload(false);
+                return;
+            }
+            
+            if (low.startsWith("create new")) {
+                const folderName = low.replace("create new", "").trim();
+                if (folderName) {
+                    createNewFolder(folderName);
+                } else {
+                    speak("Please specify a name for the new folder.");
+                }
+                return;
+            }
+
+            if (low.includes("go back") || low.includes("dashboard")) {
+                window.location.href = '/dashboard';
+                return;
+            }
+
+            // 📁 Neural Command Processing (Server Side)
+            const res = await fetch('/api/process_text_command', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ command })
+            });
+            const data = await res.json();
+            
+            if (data.response.startsWith("FOLDER_SELECT:")) {
+                const targetName = data.response.replace("FOLDER_SELECT:", "");
+                const listItems = document.querySelectorAll('#folder-list li');
+                for (let li of listItems) {
+                    if (li.innerText.trim() === targetName) {
+                        selectFolder(targetName, li);
+                        speak(`Folder ${targetName} selected.`);
+                        return;
                     }
                 }
-                
+            }
+            
+            if (data.response.includes("created successfully")) {
                 appendMessage('ai', data.response);
-                if (low.startsWith("+folder")) loadFolders();
-            } else {
-                // Check for global navigation commands first
-                const res = await fetch('/api/process_text_command', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ command })
-                });
-                const data = await res.json();
-                if (data.response.startsWith('NAV:')) {
-                    const target = data.response.replace('NAV:', '').toLowerCase();
-                    if (target === 'dashboard') window.location.href = '/dashboard';
-                    else if (target === 'image_gen') window.location.href = '/image_gen';
-                    else if (target === 'settings') window.location.href = '/settings';
-                    else if (target === 'logout') window.location.href = '/logout';
-                    else if (target === 'media') window.location.href = '/entertainment';
-                    else if (target === 'code') window.location.href = '/code_assist';
-                    return;
-                }
-                
+                speak(data.response);
+                loadFolders();
+                return;
+            }
+
+            // Default: Send to RAG Chat if a folder is selected
+            if (currentFolder) {
                 sendMessage(command);
+            } else {
+                appendMessage('ai', "Neural Link: Please select a folder first.");
+                speak("Please select a folder first.");
             }
         }
 
@@ -235,6 +282,7 @@
             const list = document.getElementById('folder-list');
             list.innerHTML = '';
             folders.forEach(f => {
+                if (f === ".keep") return;
                 const li = document.createElement('li');
                 li.innerHTML = `<i class="fas fa-folder"></i> ${f}`;
                 li.onclick = () => selectFolder(f, li);
@@ -242,14 +290,20 @@
             });
         }
 
-        async function createNewFolder() {
-            const name = prompt("Folder Name:");
+        async function createNewFolder(manualName = null) {
+            const name = manualName || prompt("Folder Name:");
             if (name) {
-                await fetch('/api/create_folder', {
+                const res = await fetch('/api/create_folder', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ name })
                 });
-                loadFolders();
+                const data = await res.json();
+                if (data.success) {
+                    speak(`Folder ${name} created.`);
+                    loadFolders();
+                } else {
+                    speak("Failed to create folder.");
+                }
             }
         }
 
@@ -258,12 +312,9 @@
             document.querySelectorAll('#folder-list li').forEach(li => li.classList.remove('active'));
             el.classList.add('active');
             document.getElementById('current-path').innerText = `Folder: ${folder}`;
-            
-            // Clear current view
             document.getElementById('chat-messages').innerHTML = '';
             chatHistory = [];
-
-            // Load History
+            
             const res = await fetch('/api/get_chat_history', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ folder: currentFolder })
@@ -274,7 +325,6 @@
                 appendMessage('ai', chat.ai);
                 chatHistory.push({ user: chat.user, ai: chat.ai });
             });
-            
             loadFiles();
         }
 
@@ -288,31 +338,92 @@
             const list = document.getElementById('file-list');
             list.innerHTML = files.length ? '' : '<li style="font-size: 0.8rem; font-style: italic;">No files</li>';
             files.forEach(f => {
+                if (f === ".keep") return;
                 const li = document.createElement('li');
                 li.innerHTML = `<i class="fas fa-file-alt"></i> ${f}`;
                 list.appendChild(li);
             });
         }
 
+        function triggerUpload(isMedia = false) {
+            if (!currentFolder) {
+                speak("Please select a folder first.");
+                return alert("Select a folder first");
+            }
+            isMediaUpload = isMedia;
+            document.getElementById('fileInput').click();
+        }
+
+        async function handleFileUpload() {
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput.files.length === 0) return;
+
+            const formData = new FormData();
+            formData.append('folder', currentFolder);
+            formData.append('media', isMediaUpload);
+            
+            for (let i = 0; i < fileInput.files.length; i++) {
+                formData.append('files', fileInput.files[i]);
+            }
+
+            const overlay = document.getElementById('uploadOverlay');
+            const status = document.getElementById('uploadStatus');
+            overlay.style.display = 'flex';
+            status.innerText = `Synchronizing ${fileInput.files.length} units...`;
+            speak(`Synchronizing ${fileInput.files.length} intelligence blocks.`);
+
+            try {
+                const res = await fetch('/api/upload_docs', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    speak("Neural link established. Processing synchronization.");
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+                        loadFiles();
+                    }, 1000);
+                } else {
+                    speak("Neural synchronization failed.");
+                    alert("Upload Failed: " + (data.error || "Unknown error"));
+                    overlay.style.display = 'none';
+                }
+            } catch (err) {
+                speak("Neural core failure.");
+                alert("Neural link failed.");
+                overlay.style.display = 'none';
+            } finally {
+                fileInput.value = '';
+            }
+        }
+
         async function sendMessage(textOverride = null) {
             const input = document.getElementById('user-input');
             const text = textOverride || input.value.trim();
             if (!text || !currentFolder) return;
+            
             appendMessage('user', text);
             input.value = '';
-            const response = await fetch('/api/ask', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    prompt: text, mode: 'rag',
-                    namespace: `user_{{session['user_id']}}_${currentFolder}`,
-                    history: chatHistory
-                })
-            });
-            const data = await response.json();
-            appendMessage('ai', data.answer);
-            speak(data.answer); // 🗣️ Announce intelligence
-            chatHistory.push({ user: text, ai: data.answer });
-            if (chatHistory.length > 5) chatHistory.shift();
+            
+            try {
+                const response = await fetch('/api/ask', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: text, mode: 'rag',
+                        namespace: `user_{{session['user_id']}}_${currentFolder}`,
+                        history: chatHistory
+                    })
+                });
+                const data = await response.json();
+                appendMessage('ai', data.answer);
+                speak(data.answer);
+                chatHistory.push({ user: text, ai: data.answer });
+                if (chatHistory.length > 5) chatHistory.shift();
+            } catch (e) {
+                appendMessage('ai', "Neural Link Timeout.");
+                speak("Neural core connection timeout.");
+            }
         }
 
         function appendMessage(role, text) {
@@ -325,17 +436,15 @@
             div.innerText = text; chat.appendChild(div); chat.scrollTop = chat.scrollHeight;
         }
 
-        async function uploadFiles(isMedia = false) {
-            if (!currentFolder) return alert("Select a folder first");
-            await fetch('/api/upload_docs', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                    folder: currentFolder,
-                    media: isMedia 
-                })
-            });
-            alert(isMedia ? "Media selection initiated." : "Document selection initiated.");
-        }
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault(); 
+                window.speechSynthesis.cancel(); 
+                isSpeaking = false;
+                if (!micPowered) toggleMicPower();
+                else if (recognition) try { recognition.stop(); } catch(err) {}
+            }
+        });
     </script>
 </body>
 </html>
