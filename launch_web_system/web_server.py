@@ -635,22 +635,38 @@ def api_ask():
     if 'user' not in session: return jsonify({"answer": "Authorization required."})
     data = request.json
     prompt = data.get('prompt')
-    namespace = data.get('namespace')
+    folder = data.get('folder') # Unified: Frontend sends folder
+    user_id = session['user_id']
+    namespace = f"user_{user_id}_{folder}"
     history = data.get('history', [])
     
     try:
         answer = rag_answer.generate_answer(prompt, namespace, history)
-        # History persistence
+        
+        # Stateless History Persistence (Azure)
         try:
-            folder = namespace.split('_')[-1]
-            user_id_part = namespace.split('_')[1]
-            history_file = os.path.join(RAG_PATH, "users", f"user_{user_id_part}", folder, "chat_history.txt")
-            os.makedirs(os.path.dirname(history_file), exist_ok=True)
-            with open(history_file, "a", encoding="utf-8") as f:
-                f.write(f"USER: {prompt}\nAI: {answer}\n---\n")
-        except: pass
+            history_blob = f"rag/user_{user_id}/{folder}/chat_history.json"
+            
+            # Read current history
+            current_history = []
+            try:
+                hb_client = container_client.get_blob_client(history_blob)
+                if hb_client.exists():
+                    data = hb_client.download_blob().readall()
+                    current_history = json.loads(data)
+            except: pass
+            
+            # Append new turn
+            current_history.append({"user": prompt, "ai": answer})
+            # Keep last 10 for storage efficiency if needed, but for now just save
+            hb_client = container_client.get_blob_client(history_blob)
+            hb_client.upload_blob(json.dumps(current_history), overwrite=True)
+        except Exception as he:
+            print(f"[ERROR] Syncing chat history to Azure failed: {he}")
+
         return jsonify({"answer": answer})
     except Exception as e:
+        print(f"[ERROR] API Ask Failed: {e}")
         return jsonify({"answer": f"Neural Core Fault: {str(e)}"})
 
 @app.route('/api/get_chat_history', methods=['POST'])
@@ -658,24 +674,19 @@ def get_chat_history_route():
     if 'user' not in session: return jsonify([])
     folder = request.json.get('folder')
     user_id = session['user_id']
-    history_file = os.path.join(RAG_PATH, "users", f"user_{user_id}", folder, "chat_history.txt")
     
-    if not os.path.exists(history_file):
-        return jsonify([])
+    history_blob = f"rag/user_{user_id}/{folder}/chat_history.json"
     
-    chats = []
     try:
-        with open(history_file, "r", encoding="utf-8") as f:
-            content = f.read()
-            blocks = content.split('---')
-            for block in blocks:
-                lines = block.strip().split('\n')
-                if len(lines) >= 2:
-                    user_msg = lines[0].replace("USER: ", "").strip()
-                    ai_msg = lines[1].replace("AI: ", "").strip()
-                    chats.append({"user": user_msg, "ai": ai_msg})
-    except: pass
-    return jsonify(chats)
+        hb_client = container_client.get_blob_client(history_blob)
+        if hb_client.exists():
+            data = hb_client.download_blob().readall()
+            chats = json.loads(data)
+            return jsonify(chats)
+    except Exception as e:
+        print(f"[ERROR] Getting chat history from Azure: {e}")
+    
+    return jsonify([])
 
 @app.route('/api/process_text_command', methods=['POST'])
 def process_text_command():

@@ -411,7 +411,7 @@
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         prompt: text, mode: 'rag',
-                        namespace: `user_{{session['user_id']}}_${currentFolder}`,
+                        folder: currentFolder,
                         history: chatHistory
                     })
                 });

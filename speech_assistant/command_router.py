@@ -24,20 +24,40 @@ APPS = {
 def route_intent(intent, command):
     command = command.strip().lower()
 
-    # 🔹 NAVIGATION (Web Core)
+    # 🔹 HIGH-PRIORITY MODULE NAVIGATION (Check Keywords with Navigation Verbs)
+    nav_verbs = ["go to", "open", "access", "start", "switch to", "launch", "initiate"]
+    
+    def is_nav(cmd, keywords):
+        cmd_low = cmd.lower()
+        # Direct match
+        if cmd_low in keywords: return True
+        # Verb + keyword match
+        for verb in nav_verbs:
+            for kw in keywords:
+                if f"{verb} {kw}" in cmd_low: return True
+        return False
+
+    if is_nav(command, ["rag", "intel", "rag intel"]):
+        return "NAV:RAG"
+    if is_nav(command, ["media", "entertainment", "movie", "video", "media box"]):
+        return "NAV:MEDIA"
+    if is_nav(command, ["image", "visual", "manifest", "image gen", "visualizer"]):
+        return "NAV:IMAGE_GEN"
+    if is_nav(command, ["code", "omni", "coder", "omni coder", "code assistant"]):
+        return "NAV:CODE"
+    if is_nav(command, ["setting", "profile", "password", "face"]):
+        return "NAV:SETTINGS"
+    if is_nav(command, ["logout", "sign out"]):
+        return "NAV:LOGOUT"
+    if is_nav(command, ["dashboard", "main", "go back"]):
+        return "NAV:DASHBOARD"
+
+    # 🔹 NAVIGATION INTENT (LLM Detected)
     if intent == "navigation" or "go back" in command or "return to main" in command:
-        if "rag" in command:
-            return "NAV:RAG"
-        if "media" in command or "entertainment" in command:
-            return "NAV:MEDIA"
-        if "image" in command or "visual" in command:
-            return "NAV:IMAGE_GEN"
-        if "setting" in command or "profile" in command or "password" in command or "face" in command:
-            return "NAV:SETTINGS"
-        if "logout" in command or "sign out" in command:
-            return "NAV:LOGOUT"
-        if "dashboard" in command or "main" in command or "go back" in command:
-            return "NAV:DASHBOARD"
+        # Fallback if keywords missed
+        if "rag" in command: return "NAV:RAG"
+        if "media" in command: return "NAV:MEDIA"
+        return "NAV:DASHBOARD"
     
     if "upload" in command or "pick files" in command:
         return "CMD:UPLOAD"
