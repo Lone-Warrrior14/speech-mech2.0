@@ -693,7 +693,7 @@ def process_text_command():
     data = request.json
     command = data.get('command', '').strip()
     if not command: return jsonify({"response": "No input."})
-    
+    low_cmd = command.lower()
     intent = detect_intent(command)
     
     # 👤 Identification (Neural Fill)
