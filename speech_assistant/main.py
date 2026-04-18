@@ -260,14 +260,39 @@ while True:
                     folders = [f for f in os.listdir(user_rag_root) if os.path.isdir(os.path.join(user_rag_root, f))]
                     if folders:
                         print("Available folders:", ", ".join(folders))
-                        speak("I see existing folders. Please type the name of the folder you want to create or use in the terminal.")
+                        speak("I see existing folders. Tell me the name of the folder you want to select or create.")
                     else:
-                        speak("No folders found. Let's create a new one. Please type the folder name in the terminal.")
+                        speak("No folders found. Tell me the name of the folder you want to create.")
                         
-                    import builtins
-                    folder_name = builtins.input(f"Enter RAG folder name (Available: {', '.join(folders)} or type new name): ").strip()
+                    # Use voice to get folder name
+                    response = listen()
+                    folder_name = None
+                    if response:
+                        import difflib
+                        # Check if it was a command like "select X" or "create X"
+                        intent = detect_intent(response)
+                        routing = route_intent(intent, response)
+                        if routing and routing.startswith("FOLDER_SELECT:"):
+                            folder_name = routing.split(":", 1)[1].strip()
+                        elif routing and routing.startswith("CREATE_FOLDER:"):
+                            folder_name = routing.split(":", 1)[1].strip()
+                        else:
+                            # Direct name mention
+                            folder_name = response.strip()
+                            # If it sounds like "select X", strip "select"
+                            if folder_name.startswith("select "): folder_name = folder_name.replace("select ", "").strip()
+                            if folder_name.startswith("create "): folder_name = folder_name.replace("create ", "").strip()
                     
                     if folder_name:
+                        # Try to match with existing folders
+                        if folders:
+                            matches = difflib.get_close_matches(folder_name, folders, n=1, cutoff=0.5)
+                            if matches:
+                                folder_name = matches[0]
+                                speak(f"Using existing folder {folder_name}.")
+                            else:
+                                speak(f"Creating new folder {folder_name}.")
+                        
                         current_rag_path = os.path.join(user_rag_root, folder_name)
                         os.makedirs(current_rag_path, exist_ok=True)
                         current_rag_namespace = f"user_{authenticated_user_id}_{folder_name}"
@@ -349,38 +374,6 @@ while True:
             else:
                 speak("RAG mode is not currently active.")
             continue
-
-        # 🔹 CODE ASSIST
-        if any(phrase in command for phrase in ["code assist", "start code assist", "open code assist", "launch code assist"]):
-            speak("Starting Code Assist. Please wait a moment.")
-            code_assist_path = os.path.join(os.path.dirname(__file__), "code_assists", "app.py")
-            try:
-                subprocess.Popen(
-                    [sys.executable, code_assist_path],
-                    cwd=os.path.join(os.path.dirname(__file__), "code_assists")
-                )
-                import time as _time
-                _time.sleep(2)  # Give Flask a moment to start
-                webbrowser.open("http://127.0.0.1:5000")
-                speak("Code Assist is running. I have opened it in your browser.")
-            except Exception as e:
-                speak("Failed to start Code Assist.")
-                print(f"Code Assist Error: {e}")
-            continue
-
-        # 🔹 ENTERTAINMENT / MEDIA
-        if any(phrase in command for phrase in ["entertainment", "media", "start entertainment", "play movies"]):
-            if entertainment_mode:
-                speak("Entering Entertainment mode.")
-                try:
-                    entertainment_mode()
-                except Exception as e:
-                    speak("Entertainment mode ended with an error.")
-                    print(f"Media error: {e}")
-                speak("You have exited Entertainment mode.")
-            else:
-                speak("Entertainment module is not available.")
-            continue
             
         if "delete user" in command or "remove user" in command:
             role = get_user_role(authenticated_user)
@@ -410,61 +403,144 @@ while True:
                     if target_user:
                         target_username = target_user['username']
                         if delete_user_by_id(victim_id):
-                            speak(f"User {target_username} has been successfully deleted from the database.")
-                            # Securely wipe their local RAG directory
+                            speak(f"User {target_username} has been successfully deleted.")
                             import shutil
                             victim_rag_dir = os.path.join(os.path.dirname(__file__), "RAG", "users", f"user_{victim_id}")
                             if os.path.exists(victim_rag_dir):
                                 try:
                                     shutil.rmtree(victim_rag_dir)
-                                    print(f"Deleted folder {victim_rag_dir}")
-                                    speak("And their local R A G files have been destroyed.")
-                                except Exception as e:
-                                    print(f"Error removing folder: {e}")
-                                    speak("However, I encountered an error removing their local files.")
-                            else:
-                                speak("No local document directory existed for them.")
+                                    speak("And their documentation files have been wiped.")
+                                except:
+                                    pass
                         else:
-                            speak(f"Database error. Failed to delete user {target_username}.")
+                            speak(f"Failed to delete user {target_username}.")
                     else:
-                        speak(f"User ID {victim_id} does not exist in the system.")
+                        speak(f"User ID {victim_id} not found.")
                 else:
-                    speak("Invalid ID entered. Deletion cancelled.")
+                    speak("Invalid ID.")
             else:
-                speak("Access Denied. You do not have administrator privileges to delete users.")
+                speak("Permission denied.")
             continue
 
+        # 🔹 GLOBAL COMMAND ROUTING
+        intent = detect_intent(command)
+        routing = route_intent(intent, command)
+
+
+        if routing:
+            if routing.startswith("NAV:"):
+                target = routing.split(":")[1]
+                if target == "MEDIA":
+                    if entertainment_mode:
+                        speak("Opening Media Box.")
+                        try:
+                            entertainment_mode()
+                        except Exception as e:
+                            speak("Media error.")
+                    else:
+                        speak("Media module unavailable.")
+                    continue
+                elif target == "RAG":
+                    interaction_mode = "rag"
+                    speak("Switching to RAG mode. Please select a folder.")
+                    continue
+                elif target == "CODE":
+                    speak("Launching Code Assist.")
+                    code_assist_path = os.path.join(os.path.dirname(__file__), "code_assists", "app.py")
+                    try:
+                        subprocess.Popen([sys.executable, code_assist_path], cwd=os.path.join(os.path.dirname(__file__), "code_assists"))
+                        webbrowser.open("http://127.0.0.1:5000")
+                    except:
+                        speak("Code Assist failed.")
+                    continue
+                elif target == "LOGOUT":
+                    authenticated_user = None
+                    authenticated_user_id = None
+                    speak("Logged out successfully.")
+                    break
+                elif target == "DASHBOARD":
+                    interaction_mode = "chat"
+                    speak("Returning to main dashboard. Normal chat active.")
+                    continue
+                else:
+                    speak(f"Navigating to {target}")
+                    continue
+            
+            elif routing.startswith("PLAY_MOVIE:"):
+                movie_name = routing.split(":", 1)[1].strip()
+                speak(f"Searching for {movie_name}...")
+                from media_library import get_movies
+                movies = get_movies()
+                import difflib
+                
+                # Create a lookup for natural names
+                natural_names = {m['name'].rsplit('.', 1)[0].replace('_', ' ').lower(): m for m in movies}
+                matches = difflib.get_close_matches(movie_name.lower(), list(natural_names.keys()), n=1, cutoff=0.3)
+                
+                if matches:
+                    match = natural_names[matches[0]]
+                    speak(f"Playing {matches[0]} from cloud.")
+                    webbrowser.open(match['url'])
+
+
+                else:
+                    speak(f"I couldn't find a movie named {movie_name} in your archives.")
+                continue
+
+
+            elif routing.startswith("FOLDER_SELECT:") or routing.startswith("CREATE_FOLDER:"):
+                interaction_mode = "rag"
+                user_rag_root = os.path.join(os.path.dirname(__file__), "RAG", "users", f"user_{authenticated_user_id}")
+                os.makedirs(user_rag_root, exist_ok=True)
+                
+                if routing.startswith("FOLDER_SELECT:"):
+                    target = routing.split(":", 1)[1].strip()
+                    folders = [f for f in os.listdir(user_rag_root) if os.path.isdir(os.path.join(user_rag_root, f))]
+                    import difflib
+                    matches = difflib.get_close_matches(target, folders, n=1, cutoff=0.3)
+                    if matches:
+                        folder_name = matches[0]
+                        current_rag_path = os.path.join(user_rag_root, folder_name)
+                        current_rag_namespace = f"user_{authenticated_user_id}_{folder_name}"
+                        rag_history.clear()
+                        speak(f"Switched to folder {folder_name}.")
+                    else:
+                        speak(f"Folder {target} not found. Say 'create folder {target}' if you want to make it.")
+                else: 
+                    folder_name = routing.split(":", 1)[1].strip()
+                    current_rag_path = os.path.join(user_rag_root, folder_name)
+                    os.makedirs(current_rag_path, exist_ok=True)
+                    current_rag_namespace = f"user_{authenticated_user_id}_{folder_name}"
+                    rag_history.clear()
+                    speak(f"Created and switched to folder {folder_name}.")
+                continue
+
+            elif routing.startswith("GEN_IMAGE:"):
+                prompt = routing.split(":", 1)[1].strip()
+                speak(f"Generating image for {prompt}...")
+                # Implementation depends on image_gen module
+                continue
+
+        # 🔹 MODE-SPECIFIC HANDLERS
         if interaction_mode == "rag" and generate_answer:
             speak("Searching documents...")
             try:
                 answer = generate_answer(command, namespace=current_rag_namespace, chat_history=rag_history)
                 speak(answer)
-                
-                # Keep history for context
                 rag_history.append({"user": command, "assistant": answer})
-                rag_history = rag_history[-5:]  # Keep last 5 turns
+                rag_history = rag_history[-5:]
                 
-                # Save the user's RAG question/answer pair locally to their dedicated folder instead of the cloud
                 try:
                     timestamp_str = time.strftime("%Y%m%d-%H%M%S")
                     local_output = os.path.join(current_rag_path, "chat_history.txt")
-                    
                     with open(local_output, "a", encoding="utf-8") as f:
                         f.write(f"[{timestamp_str}] Question: {command}\nAnswer:\n{answer}\n{'-'*40}\n")
-                        
-                    print(f"Appended RAG answer to: {local_output}")
-                except Exception as local_save_error:
-                    print(f"Failed to save locally: {local_save_error}")
-                        
+                except:
+                    pass
             except Exception as e:
                 speak("I encountered an error querying the documents.")
                 print(f"RAG Error: {e}")
         else:
-            intent = detect_intent(command)
-            response = route_intent(intent, command)
-
-            if response:
-                speak(response)
-            else:
-                reply = ask_ai(command)
-                speak(reply)
+            reply = ask_ai(command)
+            speak(reply)
+

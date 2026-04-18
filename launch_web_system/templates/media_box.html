@@ -128,6 +128,8 @@
                         {{ movie.name.rsplit('.', 1)[0].replace('_', ' ') }}
                     </div>
                     <div style="font-size: 0.8rem; color: var(--secondary); opacity: 0.6; margin-top: 0.5rem;">Cloud Storage</div>
+
+
                 </div>
                 {% endfor %}
             </div>
@@ -213,8 +215,15 @@
             if (fileInput.files.length === 0) return;
 
             const file = fileInput.files[0];
+            const customName = prompt("Enter a custom name for this movie (leave blank to use filename):", file.name.split('.')[0]);
+            
+            console.log(`[MEDIA] Archiving: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`);
+            
             const formData = new FormData();
             formData.append("file", file);
+            formData.append("name", customName || "");
+
+
 
             const status = document.getElementById("uploadStatus");
             const btn = document.getElementById("uploadBtn");
@@ -281,12 +290,17 @@
                 } else if (command.includes("play")) {
                     const cards = document.querySelectorAll('.movie-card');
                     let found = false;
+                    const target = command.replace("play movie", "").replace("play", "").trim();
+                    
                     for (let card of cards) {
-                        const title = card.innerText.toLowerCase();
-                        if (command.includes(title)) {
-                            card.click();
-                            found = true;
-                            break;
+                        const nameDiv = card.querySelector('div[style*="font-weight: 700"]');
+                        if (nameDiv) {
+                            const title = nameDiv.innerText.toLowerCase().trim();
+                            if (target.includes(title) || title.includes(target)) {
+                                card.click();
+                                found = true;
+                                break;
+                            }
                         }
                     }
                     if (!found) speak("Cloud movie title not found in archives.");
@@ -307,10 +321,26 @@
             btn.classList.add('active-mic');
             startContinuousListening();
 
+            const params = new URLSearchParams(window.location.search);
+            const autoPlay = params.get('play');
+            if (autoPlay) {
+                setTimeout(() => {
+                    const cards = document.querySelectorAll('.movie-card');
+                    for (let card of cards) {
+                        const nameDiv = card.querySelector('div[style*="font-weight: 700"]');
+                        if (nameDiv && nameDiv.innerText.toLowerCase().includes(autoPlay.toLowerCase())) {
+                            card.click();
+                            break;
+                        }
+                    }
+                }, 1000);
+            }
+
             setTimeout(() => {
                 if (!isSpeaking) speak("Neural Media Box active.");
             }, 1000);
         };
+
 
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {

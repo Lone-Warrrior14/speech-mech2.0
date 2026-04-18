@@ -172,15 +172,23 @@
                     const data = await res.json();
                     
                     if (data.response.startsWith('NAV:')) {
-                        const target = data.response.replace('NAV:', '').toLowerCase();
-                        resText.innerText = "Neural Jump: " + target;
-                        if (target === 'rag') window.location.href = '/rag';
-                        else if (target === 'media') window.location.href = '/entertainment';
-                        else if (target === 'code') window.location.href = '/code_assist';
-                        else if (target === 'image_gen') window.location.href = '/image_gen';
-                        else if (target === 'settings') window.location.href = '/settings';
-                        else if (target === 'logout') window.location.href = '/logout';
-                        else if (target === 'dashboard') window.location.href = '/dashboard';
+                        const target = data.response.replace('NAV:', '');
+                        if (target.startsWith('MEDIA_PLAY:')) {
+                            const movie = target.replace('MEDIA_PLAY:', '');
+                            resText.innerText = "Initiating Stream: " + movie;
+                            window.location.href = `/entertainment?play=${encodeURIComponent(movie)}`;
+                            return;
+                        }
+                        const lowTarget = target.toLowerCase();
+                        resText.innerText = "Neural Jump: " + lowTarget;
+                        if (lowTarget === 'rag') window.location.href = '/rag';
+                        else if (lowTarget === 'media') window.location.href = '/entertainment';
+                        else if (lowTarget === 'code') window.location.href = '/code_assist';
+                        else if (lowTarget === 'image_gen') window.location.href = '/image_gen';
+                        else if (lowTarget === 'settings') window.location.href = '/settings';
+                        else if (lowTarget === 'logout') window.location.href = '/logout';
+                        else if (lowTarget === 'dashboard') window.location.href = '/dashboard';
+
                     } else if (data.response.startsWith("GEN_IMAGE:")) {
                         const prompt = data.response.replace("GEN_IMAGE:", "");
                         resText.innerText = "Generating Visual: " + prompt;
@@ -189,6 +197,11 @@
                         const targetFolder = data.response.replace("FOLDER_SELECT:", "");
                         resText.innerText = "Synchronizing Folder: " + targetFolder;
                         window.location.href = `/rag?select_folder=${encodeURIComponent(targetFolder)}`;
+                    } else if (data.response.startsWith("CREATE_FOLDER_SUCCESS:")) {
+                        const targetFolder = data.response.replace("CREATE_FOLDER_SUCCESS:", "");
+                        resText.innerText = "Establishing Folder Path: " + targetFolder;
+                        window.location.href = `/rag?select_folder=${encodeURIComponent(targetFolder)}`;
+
                     } else if (data.response === 'CMD:UPLOAD') {
                         window.location.href = '/rag?auto_upload=true';
                     } else {

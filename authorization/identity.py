@@ -26,14 +26,23 @@ def get_connection():
         f"PWD={az_password};"
         f"Encrypt=yes;"
         f"TrustServerCertificate=yes;"
+        f"LoginTimeout=10;" # Support faster failure
     )
-    return pyodbc.connect(conn_str)
+    try:
+        return pyodbc.connect(conn_str)
+    except pyodbc.Error as e:
+        print(f"[DB ERROR] Connectivity Failure: {e}")
+        if "is not allowed to access the server" in str(e):
+            print("[CRITICAL] Firewall Block Detected. Please allow your current IP in Azure portal.")
+        return None
+
 
 
 # ---------------- USERNAME LOGIC ----------------
 
 def get_all_usernames():
     conn = get_connection()
+    if not conn: return []
     cursor = conn.cursor()
     cursor.execute("SELECT username FROM users")
     rows = cursor.fetchall()
@@ -42,8 +51,10 @@ def get_all_usernames():
     return [row[0] for row in rows]
 
 
+
 def get_all_users_with_ids():
     conn = get_connection()
+    if not conn: return []
     cursor = conn.cursor()
     cursor.execute("SELECT id, username FROM users")
     rows = cursor.fetchall()
@@ -55,8 +66,10 @@ def get_all_users_with_ids():
     return result
 
 
+
 def get_user_id(username):
     conn = get_connection()
+    if not conn: return None
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
     result = cursor.fetchone()
@@ -67,8 +80,10 @@ def get_user_id(username):
     return result.id
 
 
+
 def get_user_role(username):
     conn = get_connection()
+    if not conn: return None
     cursor = conn.cursor()
     cursor.execute("SELECT role FROM users WHERE username = ?", (username,))
     result = cursor.fetchone()
@@ -77,6 +92,7 @@ def get_user_role(username):
     if not result:
         return None
     return result.role
+
 
 
 def delete_user(username):

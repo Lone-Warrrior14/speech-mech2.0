@@ -31,20 +31,18 @@ def ask_ai(user_input):
         {"role": "assistant", "content": full_reply}
     )
 
-    summary_prompt = f"""
-    Summarize the following answer in 1-2 short sentences:
+    try:
+        summary_prompt = f"Summarize the following in 1-2 short sentences: {full_reply}"
+        summary = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": summary_prompt}]
+        )
+        short_reply = summary.choices[0].message.content
+        return short_reply
+    except Exception:
+        # Fallback to full reply if summary fails
+        return full_reply[:200] + "..." if len(full_reply) > 200 else full_reply
 
-    {full_reply}
-    """
-
-    summary = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": summary_prompt}]
-    )
-
-    short_reply = summary.choices[0].message.content
-
-    return short_reply
 
 
 def get_full_response():

@@ -19,22 +19,21 @@ def get_movies():
     """Fetches movies from Azure Blob Storage."""
     movies = []
     
-    blob_service_client = get_azure_client()
-    if not blob_service_client:
-        return []
-        
-    container_client = blob_service_client.get_container_client(CONTAINER_NAME)
-    
     try:
-        blobs = container_client.list_blobs(name_starts_with="movies/")
-        for blob in blobs:
-            if blob.name.lower().endswith(VIDEO_EXT):
-                url = f"https://{blob_service_client.account_name}.blob.core.windows.net/{CONTAINER_NAME}/{blob.name}"
-                movies.append({
-                    "name": os.path.basename(blob.name),
-                    "url": url
-                })
+        blob_service_client = get_azure_client()
+
+        if blob_service_client and CONTAINER_NAME:
+            container_client = blob_service_client.get_container_client(CONTAINER_NAME)
+            blobs = container_client.list_blobs(name_starts_with="movies/")
+            for blob in blobs:
+                if blob.name.lower().endswith(VIDEO_EXT):
+                    url = f"https://{blob_service_client.account_name}.blob.core.windows.net/{CONTAINER_NAME}/{blob.name}"
+                    movies.append({
+                        "name": os.path.basename(blob.name),
+                        "url": url,
+                        "source": "cloud"
+                    })
     except Exception as e:
-        print(f"Error fetching movies from Azure: {e}")
-        
+        print(f"Cloud Link Stability Warning: {e}")
+            
     return movies

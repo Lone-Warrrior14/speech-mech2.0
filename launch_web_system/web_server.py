@@ -79,7 +79,8 @@ if not all([rag_answer, universal_reader, insert_pinecone]):
 
 # Consolidated Configuration
 RAG_PATH = os.path.join(root_dir, 'rag_system', 'RAG')
-MEDIA_FOLDER = os.path.join(root_dir, "speech_assistant", "media", "media", "movies")
+MEDIA_FOLDER = os.path.join(root_dir, "speech_assistant", "media", "mediabox", "movies")
+
 os.makedirs(MEDIA_FOLDER, exist_ok=True)
 
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
@@ -266,18 +267,31 @@ def play_media(filename):
 
 @app.route('/api/upload_media', methods=['POST'])
 def upload_media_api():
+    print(f"[DEBUG] Media Upload Request: Files={list(request.files.keys())}, Form={list(request.form.keys())}")
     if 'file' not in request.files:
+        print("[ERROR] 'file' missing from request.files")
         return jsonify({"error": "No file"}), 400
 
     file = request.files['file']
     if file.filename == '':
+        print("[ERROR] Filename is empty")
         return jsonify({"error": "No selected file"}), 400
 
+
+
     try:
-        blob_name = f"movies/{file.filename}"
+        custom_name = request.form.get('name', '').strip()
+        if custom_name:
+            ext = os.path.splitext(file.filename)[1]
+            blob_name = f"movies/{custom_name}{ext}"
+        else:
+            blob_name = f"movies/{file.filename}"
+
+            
         blob_client = container_client.get_blob_client(blob_name)
         blob_client.upload_blob(file, overwrite=True)
         return jsonify({"success": True})
+
     except Exception as e:
         print(f"[ERROR] Azure Upload Failed: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
@@ -702,44 +716,6 @@ def process_text_command():
         if matches: return jsonify({"response": "IDENT:" + matches[0]})
         return jsonify({"response": "User identity not found."})
 
-    # 📁 RAG Folder Creation (+folder or "create new")
-    if low_cmd.startswith("+folder") or low_cmd.startswith("create new"):
-        folder_name = low_cmd.replace("+folder", "").replace("create new", "").strip()
-        if 'user' in session and folder_name:
-            user_id = session['user_id']
-            # We already have a create_folder function logic, but here we do it via command
-            blob_name = f"rag/user_{user_id}/{folder_name}/.keep"
-            try:
-                blob_client = container_client.get_blob_client(blob_name)
-                blob_client.upload_blob(b"", overwrite=True)
-                return jsonify({"response": f"Neural Link: Folder '{folder_name}' created successfully."})
-            except Exception as e:
-                return jsonify({"response": f"Neural Core Fault: {str(e)}"})
-
-    # 📁 RAG Folder Selection (select folder [name] OR select [name])
-    if "select folder" in low_cmd or low_cmd.startswith("select "):
-        folder_target = low_cmd.replace("select folder", "").replace("select", "").strip()
-        if 'user' in session and folder_target:
-            import difflib
-            user_id = session['user_id']
-            # Fetch existing folders from Azure to match
-            prefix = f"rag/user_{user_id}/"
-            try:
-                blobs = container_client.list_blobs(name_starts_with=prefix)
-                folders = set()
-                for b in blobs:
-                    parts = b.name[len(prefix):].split('/')
-                    if len(parts) > 0 and parts[0]: folders.add(parts[0])
-                
-                if folders:
-                    matches = difflib.get_close_matches(folder_target, list(folders), n=1, cutoff=0.3)
-                    if matches:
-                        return jsonify({"response": f"FOLDER_SELECT:{matches[0]}"})
-            except: pass
-            return jsonify({"response": f"Neural Link: Folder '{folder_target}' not found."})
-
-    # 📁 RAG Folder Creation (+folder)
-    
     # 📚 RAG Subject Creation (+subject)
     if command.startswith("+subject"):
         parts = command.replace("+subject", "").strip().split(None, 1)
@@ -751,6 +727,45 @@ def process_text_command():
             return jsonify({"response": f"Subject '{subject}' created in '{folder}'."})
 
     response = route_intent(intent, command)
+    
+    if response:
+        if response.startswith("FOLDER_SELECT:"):
+            folder_target = response.replace("FOLDER_SELECT:", "").strip()
+            if 'user' in session and folder_target:
+                import difflib
+                user_id = session['user_id']
+                prefix = f"rag/user_{user_id}/"
+                try:
+                    blobs = container_client.list_blobs(name_starts_with=prefix)
+                    folders = set()
+                    for b in blobs:
+                        parts = b.name[len(prefix):].split('/')
+                        if len(parts) > 0 and parts[0]: folders.add(parts[0])
+                    
+                    if folders:
+                        matches = difflib.get_close_matches(folder_target, list(folders), n=1, cutoff=0.3)
+                        if matches:
+                            return jsonify({"response": f"FOLDER_SELECT:{matches[0]}"})
+                except: pass
+                return jsonify({"response": f"Neural Link: Folder '{folder_target}' not found."})
+        if response.startswith("PLAY_MOVIE:"):
+            target = response.replace("PLAY_MOVIE:", "").strip()
+            return jsonify({"response": f"NAV:MEDIA_PLAY:{target}"})
+
+        if response.startswith("CREATE_FOLDER:"):
+            folder_name = response.replace("CREATE_FOLDER:", "").strip()
+            if 'user' in session and folder_name:
+                user_id = session['user_id']
+                blob_name = f"rag/user_{user_id}/{folder_name}/.keep"
+                try:
+                    blob_client = container_client.get_blob_client(blob_name)
+                    blob_client.upload_blob(b"", overwrite=True)
+                    # Redirect-compatible response
+                    return jsonify({"response": f"CREATE_FOLDER_SUCCESS:{folder_name}"})
+                except Exception as e:
+                    return jsonify({"response": f"Neural Core Fault: {str(e)}"})
+
+
     if not response:
         response = ask_ai(command)
     

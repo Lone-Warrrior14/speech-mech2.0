@@ -260,12 +260,22 @@
                 }
             }
             
-            if (data.response.includes("created successfully")) {
-                appendMessage('ai', data.response);
-                speak(data.response);
-                loadFolders();
+            if (data.response.startsWith("CREATE_FOLDER_SUCCESS:")) {
+                const folderName = data.response.replace("CREATE_FOLDER_SUCCESS:", "");
+                appendMessage('ai', `Neural Link: Folder '${folderName}' established.`);
+                speak(`Folder ${folderName} established.`);
+                await loadFolders();
+                // Find and select the new folder
+                const listItems = document.querySelectorAll('#folder-list li');
+                for (let li of listItems) {
+                    if (li.innerText.trim() === folderName) {
+                        selectFolder(folderName, li);
+                        break;
+                    }
+                }
                 return;
             }
+
 
             // Default: Send to RAG Chat if a folder is selected
             if (currentFolder) {

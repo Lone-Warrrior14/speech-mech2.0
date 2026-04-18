@@ -6,7 +6,8 @@ def detect_intent(command):
     - ask_time
     - ask_date
     - identification (if the user says their name or who they are, e.g., "I am John", "My name is Alice")
-    - navigation (if the user wants to open a module, e.g., "open rag", "go to dashboard", "start code assistant")
+    - navigation (if the user wants to navigate, open a module, select/create folders, or play media. e.g., "open rag", "select folder documents", "create folder research", "play Transformers", "go to dashboard")
+
     - image_gen (if the user wants to generate an image, e.g., "generate a cat", "create a picture of a dog", "make an image of ...")
     - general (if it's just a question or chat)
 
